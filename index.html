@@ -1,195 +1,436 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Quản lý chi tiêu</title>
-<script src="https://cdn.tailwindcss.com/3.4.17"></script>
-<script src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/prop-types@15.8.1/prop-types.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/react-is@18.3.1/umd/react-is.production.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/recharts@2.12.7/umd/Recharts.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/lucide-react@0.383.0/dist/umd/lucide-react.min.js"></script>
-<style>
-:root{--bg:#f6f7f9;--sf:#fff;--tx:#0f172a;--mu:#64748b;--bd:#e5e7eb;--ac:#4f46e5;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b1020;--sf:#141b2e;--tx:#e8ecf6;--mu:#94a3b8;--bd:#25304a;--ac:#818cf8;color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#0b1020;--sf:#141b2e;--tx:#e8ecf6;--mu:#94a3b8;--bd:#25304a;--ac:#818cf8;color-scheme:dark}
-html{scroll-padding-top:env(safe-area-inset-top,0px)}
-body{background:var(--bg);color:var(--tx);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;margin:0}
-.card{background:var(--sf);border:1px solid var(--bd);border-radius:16px;padding:16px}
-.inp{width:100%;background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:8px 12px;color:var(--tx);font-size:14px;outline:none}
-.inp:focus{border-color:var(--ac)}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 14px;border-radius:10px;font-weight:600;font-size:14px;border:1px solid var(--bd);background:var(--sf);color:var(--tx);cursor:pointer}
-.pri{background:var(--ac);color:#fff;border-color:var(--ac)}
-.mu{color:var(--mu)}
-.ib{padding:6px;border-radius:8px;border:0;background:transparent;color:var(--mu);cursor:pointer}
-.ib:hover{background:var(--bg)}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Quản lý chi tiêu</title>
+  <meta name="theme-color" content="#f4f6fb">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Áp theme trước khi vẽ trang để không bị nháy màu -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('qlct_theme');
+        if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) { document.documentElement.setAttribute('data-theme', 'light'); }
+    })();
+  </script>
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<div id="root"></div>
-<script>
-const h=React.createElement,{useState,useMemo,useEffect,useRef}=React;
-const L=window.lucideReact||{},R=window.Recharts||{};
-const Ic=({n,s=18,c})=>{const C=L[n];return C?h(C,{size:s,color:c}):null};
-const mk=t=>(c,...k)=>{let p={className:c};if(k[0]&&k[0].constructor===Object&&!k[0].$$typeof)p={...p,...k.shift()};return h(t,p,...k)};
-const D=mk('div'),S=mk('span');
-const KEY='qlct_v1';
-const EXP=[['an','Ăn uống','Utensils','#f97316'],['nh','Nhà cửa/Hóa đơn','Home','#3b82f6'],['dl','Đi lại','Car','#14b8a6'],['ms','Mua sắm','ShoppingBag','#ec4899'],['gt','Giải trí','Clapperboard','#8b5cf6'],['yt','Y tế','HeartPulse','#ef4444'],['gd','Giáo dục','GraduationCap','#eab308'],['khac','Khác','MoreHorizontal','#64748b']].map(a=>({id:a[0],name:a[1],icon:a[2],color:a[3]}));
-const INC=[['luong','Lương','Wallet','#16a34a'],['thuong','Thưởng','Gift','#22c55e'],['dt','Đầu tư','TrendingUp','#0ea5e9'],['tnk','Thu nhập khác','Coins','#84cc16']].map(a=>({id:a[0],name:a[1],icon:a[2],color:a[3]}));
-const ALL=[...EXP,...INC],cat=id=>ALL.find(c=>c.id===id)||EXP[7];
-const fmt=n=>new Intl.NumberFormat('vi-VN').format(Math.round(n))+' đ';
-const pad=n=>String(n).padStart(2,'0');
-const todayStr=()=>{const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())};
-const fmtDate=s=>s.split('-').reverse().join('/');
-const load=()=>{try{const d=JSON.parse(localStorage.getItem(KEY));if(d&&Array.isArray(d.txs))return{txs:d.txs,budgets:d.budgets||{},plan:d.plan||null}}catch(e){}return{txs:[],budgets:{},plan:null}};
-const mdiff=(a,b)=>{const[y1,m1]=a.split('-').map(Number),[y2,m2]=b.split('-').map(Number);return(y2-y1)*12+m2-m1};
-const lastMonths=(m,n)=>{let[y,mo]=m.split('-').map(Number);const out=[];for(let i=0;i<n;i++){out.unshift(y+'-'+pad(mo));mo--;if(!mo){mo=12;y--}}return out};
-const short=v=>v>=1e6?+(v/1e6).toFixed(1)+'tr':v>=1e3?Math.round(v/1e3)+'k':v;
-const pm=s=>{s=String(s==null?'':s).toLowerCase().replace(/\s/g,'');if(!s)return 0;let m=s.match(/^(\d+(?:[.,]\d+)?)(?:tr|triệu|trieu|m)(\d{1,3})?$/);if(m)return Math.round(parseFloat(m[1].replace(',','.'))*1e6+(m[2]?Number(m[2])*Math.pow(10,6-m[2].length):0));m=s.match(/^(\d+(?:[.,]\d+)?)(?:k|nghìn|nghin|ngàn|ngan)$/);if(m)return Math.round(parseFloat(m[1].replace(',','.'))*1e3);return /^[\d.,]+$/.test(s)?Number(s.replace(/\D/g,''))||0:0};
-function AmtInp({value,onChange,placeholder,className,style,autoFocus}){
-  const raw=String(value==null?'':value),dig=/^\d+$/.test(raw),p=pm(raw);
-  return D('',{style},h('input',{className:'inp '+(className||''),inputMode:'text',autoFocus,placeholder,value:dig?new Intl.NumberFormat('vi-VN').format(raw):raw,onChange:e=>{const v=e.target.value.slice(0,24);onChange(/^[\d.]*$/.test(v)?v.replace(/\D/g,'').slice(0,12):v)}}),p>0&&!dig&&D('text-xs mt-1 font-semibold',{style:{color:'#22c55e'}},'= '+fmt(p)));
-}
 
-function Form({init,onSave,onClose}){
-  const [f,setF]=useState(init.id?{...init,amount:String(init.amount)}:{amount:'',type:'expense',cat:'an',date:todayStr(),note:''});
-  const [err,setErr]=useState('');
-  const set=(k,v)=>setF(p=>({...p,[k]:v}));
-  const cats=f.type==='expense'?EXP:INC;
-  const submit=()=>{const a=pm(f.amount);if(!a||a<=0)return setErr('Vui lòng nhập số tiền hợp lệ.');if(!f.date)return setErr('Vui lòng chọn ngày.');onSave({...f,amount:a})};
-  const lab=(t,el)=>h('label',{className:'block'},S('text-xs font-semibold mu block mb-1',t),el);
-  return D('fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4',
-    h('div',{className:'absolute inset-0 bg-black/50',onClick:onClose}),
-    D('card relative w-full sm:max-w-md space-y-3 max-h-[92vh] overflow-y-auto',
-      D('flex items-center justify-between',h('h2',{className:'font-bold text-lg'},init.id?'Sửa giao dịch':'Thêm giao dịch'),h('button',{className:'ib',onClick:onClose},h(Ic,{n:'X'}))),
-      D('grid grid-cols-2 gap-2',['expense','income'].map(t=>h('button',{key:t,className:'btn '+(f.type===t?'pri':''),onClick:()=>setF(p=>({...p,type:t,cat:t==='expense'?'an':'luong'}))},t==='expense'?'Chi tiêu':'Thu nhập'))),
-      lab('Số tiền (VND) — gõ được 4tr, 40k, 400000',h(AmtInp,{className:'text-lg font-bold',placeholder:'VD: 4tr, 40k, 400000',value:f.amount,onChange:v=>set('amount',v)})),
-      lab('Danh mục',D('grid grid-cols-4 gap-2',cats.map(c=>h('button',{key:c.id,type:'button',onClick:()=>set('cat',c.id),className:'flex flex-col items-center gap-1 p-2 rounded-xl text-[11px] leading-tight text-center',style:{border:'2px solid '+(f.cat===c.id?c.color:'var(--bd)'),background:f.cat===c.id?c.color+'22':'transparent',color:'var(--tx)',cursor:'pointer'}},h(Ic,{n:c.icon,s:20,c:c.color}),c.name)))),
-      lab('Ngày giao dịch',h('input',{type:'date',className:'inp',value:f.date,onChange:e=>set('date',e.target.value)})),
-      lab('Ghi chú',h('input',{className:'inp',placeholder:'Ví dụ: Cơm trưa với đồng nghiệp',maxLength:120,value:f.note,onChange:e=>set('note',e.target.value)})),
-      err&&D('text-sm text-red-500',err),
-      D('flex gap-2 pt-1',h('button',{className:'btn flex-1',onClick:onClose},'Hủy'),h('button',{className:'btn pri flex-1',onClick:submit},h(Ic,{n:'Check',s:16}),'Lưu'))));
-}
+  <!-- ================= HEADER ================= -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3"/>
+            <path d="M3 5a2 2 0 0 0 2 2h14a2 2 0 0 1 2 2v3"/>
+            <path d="M21 12h-4a2 2 0 0 0 0 4h4v-4z" fill="currentColor" fill-opacity=".25"/>
+            <circle cx="17.5" cy="14" r=".6" fill="currentColor"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>Quản lý chi tiêu</h1>
+          <p id="brandSub">Tổng quan tất cả</p>
+        </div>
+      </div>
 
-function Backup({data,onImport,onClose}){
-  const [txt,setTxt]=useState(JSON.stringify(data,null,2));
-  const [msg,setMsg]=useState('');
-  const copy=async()=>{try{await navigator.clipboard.writeText(txt);setMsg('Đã sao chép vào clipboard.')}catch(e){setMsg('Không thể tự sao chép, hãy bôi đen và sao chép thủ công.')}};
-  const file=e=>{const fl=e.target.files[0];if(!fl)return;const r=new FileReader();r.onload=()=>{setTxt(String(r.result));setMsg('Đã đọc file. Bấm “Nhập dữ liệu” để áp dụng.')};r.readAsText(fl)};
-  const imp=()=>{try{const d=JSON.parse(txt);if(!d||!Array.isArray(d.txs))throw 0;const txs=d.txs.filter(t=>t&&Number(t.amount)>0&&/^\d{4}-\d{2}-\d{2}$/.test(t.date)).map(t=>({id:String(t.id||Math.random().toString(36).slice(2)),amount:Number(t.amount),type:t.type==='income'?'income':'expense',cat:t.cat||'khac',date:t.date,note:String(t.note||'')}));onImport({txs,budgets:d.budgets&&typeof d.budgets==='object'?d.budgets:{},plan:d.plan&&Number(d.plan.income)>0&&Number(d.plan.saving)>=0&&Number(d.plan.saving)<Number(d.plan.income)?{income:Number(d.plan.income),saving:Number(d.plan.saving),from:/^\d{4}-\d{2}$/.test(d.plan.from)?d.plan.from:todayStr().slice(0,7)}:null});onClose()}catch(e){setMsg('Dữ liệu JSON không hợp lệ.')}};
-  return D('fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4',
-    h('div',{className:'absolute inset-0 bg-black/50',onClick:onClose}),
-    D('card relative w-full sm:max-w-lg space-y-3 max-h-[92vh] overflow-y-auto',
-      D('flex items-center justify-between',h('h2',{className:'font-bold text-lg'},'Sao lưu & khôi phục'),h('button',{className:'ib',onClick:onClose},h(Ic,{n:'X'}))),
-      D('text-sm mu','Xuất: sao chép nội dung JSON bên dưới và lưu lại. Nhập: dán JSON đã sao lưu (hoặc chọn file .json) rồi bấm “Nhập dữ liệu”. Việc nhập sẽ thay thế dữ liệu hiện tại.'),
-      h('textarea',{className:'inp font-mono text-xs',rows:10,value:txt,onChange:e=>setTxt(e.target.value)}),
-      D('flex flex-wrap gap-2',h('button',{className:'btn',onClick:copy},h(Ic,{n:'Copy',s:16}),'Sao chép'),h('label',{className:'btn'},h(Ic,{n:'Upload',s:16}),'Chọn file',h('input',{type:'file',accept:'.json,application/json',className:'hidden',onChange:file})),h('button',{className:'btn pri',onClick:imp},h(Ic,{n:'Download',s:16}),'Nhập dữ liệu')),
-      msg&&D('text-sm mu',msg)));
-}
+      <div class="header-controls">
+        <div class="month-nav">
+          <button class="icon-btn" id="prevMonth" aria-label="Tháng trước" title="Tháng trước">
+            <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <label class="month-field">
+            <svg viewBox="0 0 24 24" class="cal-ico"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            <span id="monthLabel">Tháng</span>
+            <input type="month" id="monthPicker" aria-label="Chọn tháng">
+          </label>
+          <button class="icon-btn" id="nextMonth" aria-label="Tháng sau" title="Tháng sau">
+            <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+          </button>
+        </div>
 
-function Stat({icon,color,label,value,sub}){
-  return D('card',D('flex items-center gap-2 mb-2',D('p-2 rounded-lg',null),null),null)&&D('card',
-    D('flex items-center gap-2 mb-2',h('span',{className:'p-1.5 rounded-lg inline-flex',style:{background:color+'22'}},h(Ic,{n:icon,s:16,c:color})),S('text-xs font-semibold mu',label)),
-    D('text-lg sm:text-xl font-bold break-words',value),sub&&D('text-xs mu mt-0.5',sub));
-}
+        <button class="icon-btn theme-btn" id="btnTheme" aria-label="Đổi giao diện sáng/tối" title="Sáng / Tối">
+          <svg class="ico-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+          <svg class="ico-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
 
-function App(){
-  const [data,setData]=useState(load);
-  const [month,setMonth]=useState(todayStr().slice(0,7));
-  const [ft,setFt]=useState('all'),[fc,setFc]=useState('all');
-  const [form,setForm]=useState(null),[bk,setBk]=useState(false),[eb,setEb]=useState(false),[bv,setBv]=useState('');
-  const [del,setDel]=useState(null),[toast,setToast]=useState('');
-  const [ep,setEp]=useState(false),[pi,setPi]=useState(''),[ps,setPs]=useState('');
-  const [sync,setSync]=useState('local');const ref=useRef(null),last=useRef('');
-  useEffect(()=>{const j=JSON.stringify(data);try{localStorage.setItem(KEY,j)}catch(e){}
-    if(ref.current&&j!==last.current){last.current=j;setSync('syncing');ref.current.set({json:j,updated:Date.now()}).then(()=>setSync('ok')).catch(()=>setSync('err'))}},[data]);
-  useEffect(()=>{let un,dead=false;(async()=>{try{if(!window.claude)return;const[u,db]=await Promise.all([claude.use('user'),claude.use('db')]);if(!u||!db||dead)return;const id=await u.id();if(!id)return;
-    const r=db.collection('data/users/'+id).doc('ledger');setSync('syncing');let first=true;
-    un=r.onSnapshot(s=>{const d=s.exists?s.data():null;
-      if(first){if(!s.exists&&s.metadata&&s.metadata.fromCache)return;first=false;
-        if(d&&typeof d.json==='string'){last.current=d.json;try{setData(JSON.parse(d.json))}catch(e){}}
-        else{const l=load(),j=JSON.stringify(l);if(l.txs.length||Object.keys(l.budgets).length||l.plan){last.current=j;r.set({json:j,updated:Date.now()}).catch(()=>setSync('err'))}}
-        ref.current=r;setSync('ok');return}
-      if(d&&typeof d.json==='string'&&d.json!==last.current){last.current=d.json;try{setData(JSON.parse(d.json))}catch(e){}}setSync('ok')},()=>setSync('err'))
-    }catch(e){setSync('err')}})();return()=>{dead=true;un&&un()}},[]);
-  const say=m=>{setToast(m);setTimeout(()=>setToast(''),2200)};
-  const {txs,budgets}=data,plan=data.plan||null;
-  const mt=useMemo(()=>txs.filter(t=>t.date.slice(0,7)===month),[txs,month]);
-  const inc=mt.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
-  const exp=mt.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
-  const bal=txs.reduce((s,t)=>s+(t.type==='income'?t.amount:-t.amount),0);
-  const planOn=!!plan&&mdiff(plan.from,month)>=0;
-  const limit=planOn?plan.income-plan.saving:0;
-  const saved=planOn?plan.saving*(mdiff(plan.from,month)+1):0;
-  const budget=planOn?limit:(Number(budgets[month])||0),pct=budget?exp/budget*100:0;
-  const col=pct>90?'#ef4444':pct>=70?'#f59e0b':'#22c55e';
-  const list=mt.filter(t=>(ft==='all'||t.type===ft)&&(fc==='all'||t.cat===fc)).sort((a,b)=>b.date.localeCompare(a.date)||b.id.localeCompare(a.id));
-  const pie=EXP.map(c=>({name:c.name,color:c.color,value:mt.filter(t=>t.type==='expense'&&t.cat===c.id).reduce((s,t)=>s+t.amount,0)})).filter(x=>x.value>0);
-  const bars=lastMonths(month,6).map(m=>{const x=txs.filter(t=>t.date.slice(0,7)===m);return{name:'T'+m.slice(5)+'/'+m.slice(2,4),'Thu nhập':x.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0),'Chi tiêu':x.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0)}});
-  const save=t=>{let msg='Đã lưu giao dịch';if(plan&&t.type==='expense'){const nm=t.date.slice(0,7);if(mdiff(plan.from,nm)>=0){const tot=txs.filter(x=>x.type==='expense'&&x.date.slice(0,7)===nm&&x.id!==t.id).reduce((a,x)=>a+x.amount,0)+t.amount;if(tot>plan.income-plan.saving)msg='⚠ Chi tiêu đã vượt hạn mức tháng '+nm.slice(5)+'/'+nm.slice(0,4)+'!'}}setData(p=>({...p,txs:t.id?p.txs.map(x=>x.id===t.id?t:x):[{...t,id:Date.now().toString(36)+Math.random().toString(36).slice(2,6)},...p.txs]}));setMonth(t.date.slice(0,7));setForm(null);say(msg)};
-  const saveB=()=>{setData(p=>({...p,budgets:{...p.budgets,[month]:pm(bv)}}));setEb(false);say('Đã cập nhật ngân sách')};
+        <div class="menu-wrap">
+          <button class="icon-btn" id="btnMenu" aria-label="Dữ liệu & cài đặt" aria-haspopup="true" title="Dữ liệu & cài đặt">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+          </button>
+          <div class="menu" id="menu" role="menu">
+            <button role="menuitem" data-action="backup">
+              <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+              Sao lưu (.json)
+            </button>
+            <button role="menuitem" data-action="restore">
+              <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+              Tải file sao lưu (Khôi phục)
+            </button>
+            <button role="menuitem" data-action="excel">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
+              Xuất Excel (.xlsx)
+            </button>
+            <hr>
+            <button role="menuitem" data-action="categories">
+              <svg viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><circle cx="7" cy="7" r="1.5"/></svg>
+              Quản lý danh mục
+            </button>
+            <button role="menuitem" data-action="stacks">
+              <svg viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/></svg>
+              Quản lý Stack (Ngân hàng)
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
 
-  const money=(v,set)=>h(AmtInp,{placeholder:'VD: 4tr',value:v,onChange:set});
-  const openPlan=()=>{setPi(plan?String(plan.income):'');setPs(plan?String(plan.saving):'');setEp(true)};
-  const savePlan=()=>{const i=pm(pi),sv=pm(ps);if(!i||i<=0)return say('Nhập thu nhập cố định hợp lệ');if(!sv||sv<=0)return say('Nhập khoản tiết kiệm hợp lệ');if(sv>=i)return say('Tiết kiệm phải nhỏ hơn thu nhập');setData(p=>({...p,plan:{income:i,saving:sv,from:planOn?plan.from:month}}));setEp(false);say('Đã lưu kế hoạch tiết kiệm')};
-  const delPlan=()=>{setData(p=>({...p,plan:null}));setEp(false);say('Đã xóa kế hoạch tiết kiệm')};
-  const over=planOn&&exp>limit,fl=lab=>h('label',{className:'block'},S('text-xs font-semibold mu block mb-1',lab[0]),money(lab[1],lab[2]));
-  const planCard=ep?D('card space-y-3',
-      D('font-semibold','Kế hoạch tiết kiệm hàng tháng'),
-      D('text-xs mu','Thu nhập và khoản tiết kiệm cố định này được áp dụng mỗi tháng. Hạn mức chi tiêu = Thu nhập − Tiết kiệm.'),
-      D('grid sm:grid-cols-2 gap-3',fl(['Thu nhập cố định / tháng',pi,setPi]),fl(['Tiết kiệm cố định / tháng',ps,setPs])),
-      pm(pi)>0&&pm(ps)>0&&pm(ps)<pm(pi)&&D('text-sm','Hạn mức chi tiêu mỗi tháng: ',S('font-bold',fmt(pm(pi)-pm(ps)))),
-      D('flex flex-wrap gap-2',h('button',{className:'btn pri',onClick:savePlan},h(Ic,{n:'Check',s:16}),'Lưu'),h('button',{className:'btn',onClick:()=>setEp(false)},'Hủy'),plan&&h('button',{className:'btn',style:{color:'#ef4444'},onClick:delPlan},h(Ic,{n:'Trash2',s:16}),'Xóa kế hoạch')))
-    :!planOn?D('card flex flex-wrap items-center justify-between gap-2',
-      D('flex items-center gap-2',h('span',{className:'p-2 rounded-xl inline-flex',style:{background:'#22c55e22'}},h(Ic,{n:'PiggyBank',c:'#22c55e'})),D('',D('font-semibold','Khoản tiết kiệm cố định'),D('text-sm mu',plan?'Kế hoạch bắt đầu từ tháng '+plan.from.slice(5)+'/'+plan.from.slice(0,4):'Trích cố định mỗi tháng, phần còn lại là hạn mức chi tiêu'))),
-      h('button',{className:'btn',onClick:openPlan},h(Ic,{n:'Plus',s:16}),plan?'Sửa':'Thiết lập'))
-    :D('card space-y-3',
-      D('flex flex-wrap items-start justify-between gap-2',D('',D('font-semibold','Kế hoạch tháng '+month.slice(5)+'/'+month.slice(0,4)),D('text-sm mu','Thu nhập cố định '+fmt(plan.income))),h('button',{className:'btn',onClick:openPlan},h(Ic,{n:'Pencil',s:16}),'Sửa')),
-      D('grid grid-cols-3 gap-2 text-center',[['Hạn mức chi tiêu',limit,'#3b82f6'],['Tiết kiệm / tháng',plan.saving,'#22c55e'],['Đã tiết kiệm',saved,'#22c55e']].map(x=>D('rounded-xl p-2',{key:x[0],style:{background:x[2]+'18'}},D('text-[11px] mu',x[0]),D('text-sm font-bold break-words',{style:{color:x[2]}},fmt(x[1]))))),
-      D('',h('div',{className:'w-full h-3 rounded-full overflow-hidden',style:{background:'var(--bg)',border:'1px solid var(--bd)'}},h('div',{style:{width:Math.min(pct,100)+'%',height:'100%',background:col,transition:'width .4s'}})),
-        D('flex justify-between text-xs mt-2',S('mu','Đã chi '+fmt(exp)+' / '+fmt(limit)),S('font-semibold',{style:{color:col}},over?'Vượt '+fmt(exp-limit):'Còn được tiêu: '+fmt(limit-exp)))),
-      over?D('flex items-start gap-2 rounded-xl p-3 text-sm font-semibold',{style:{background:'#ef444418',border:'1px solid #ef4444',color:'#ef4444'}},h(Ic,{n:'AlertTriangle',s:18}),'Cảnh báo: bạn đã chi vượt hạn mức '+fmt(exp-limit)+'. Khoản vượt này đang lấy từ tiền tiết kiệm.')
-        :pct>90?D('flex items-start gap-2 rounded-xl p-3 text-sm font-semibold',{style:{background:'#f59e0b18',border:'1px solid #f59e0b',color:'#f59e0b'}},h(Ic,{n:'AlertTriangle',s:18}),'Sắp hết hạn mức chi tiêu, chỉ còn '+fmt(limit-exp)+'.')
-        :pct>=70&&D('text-xs font-semibold',{style:{color:'#f59e0b'}},'Chú ý: đã dùng phần lớn hạn mức chi tiêu.'));
-  const hasChart=!!R.PieChart;
-  const filt=(v,set,opts)=>h('select',{className:'inp',style:{width:'auto',minWidth:120},value:v,onChange:e=>set(e.target.value)},opts.map(o=>h('option',{key:o[0],value:o[0]},o[1])));
+    <!-- Thanh chuyển Stack -->
+    <nav class="stack-tabs" id="stackTabs" aria-label="Chọn nguồn tiền"></nav>
+  </header>
 
-  return D('max-w-5xl mx-auto p-4 sm:p-6 space-y-4',
-    D('card flex items-center gap-3 w-fit',{style:{padding:'10px 14px'}},h('span',{className:'p-2 rounded-xl inline-flex',style:{background:'#3b82f622'}},h(Ic,{n:'Wallet',s:20,c:'#3b82f6'})),D('',D('text-xs font-semibold mu','Số dư hiện tại'),D('text-xl font-bold leading-tight',{style:{color:bal<0?'#ef4444':'var(--tx)'}},fmt(bal)))),
-    D('flex flex-wrap items-center justify-between gap-3',
-      D('flex items-center gap-2',h('span',{className:'p-2 rounded-xl text-white inline-flex',style:{background:'var(--ac)'}},h(Ic,{n:'PiggyBank',s:22})),D('',h('h1',{className:'text-xl font-bold leading-tight'},'Quản lý chi tiêu'),D('text-xs mu','Kiểm soát ngân sách cá nhân hàng tháng'))),
-      D('flex items-center gap-2',h('span',{className:'inline-flex items-center gap-1 text-xs mu',title:'Dữ liệu được lưu theo tài khoản và đồng bộ giữa các thiết bị'},h(Ic,{n:sync==='ok'?'Cloud':'CloudOff',s:16,c:sync==='ok'?'#22c55e':sync==='err'?'#ef4444':undefined}),S('hidden sm:inline',{ok:'Đã đồng bộ',syncing:'Đang đồng bộ…',err:'Lỗi đồng bộ',local:'Chỉ lưu trên máy này'}[sync])),h('input',{type:'month',className:'inp',style:{width:'auto'},value:month,onChange:e=>e.target.value&&setMonth(e.target.value)}),h('button',{className:'btn',title:'Sao lưu / khôi phục',onClick:()=>setBk(true)},h(Ic,{n:'DatabaseBackup',s:16}),S('hidden sm:inline','Sao lưu')),h('button',{className:'btn pri',onClick:()=>setForm({})},h(Ic,{n:'Plus',s:16}),'Thêm'))),
-    D('grid grid-cols-2 sm:grid-cols-3 gap-3',
-      h(Stat,{icon:'TrendingUp',color:'#22c55e',label:'Tổng thu nhập',value:fmt(inc)}),
-      h(Stat,{icon:'TrendingDown',color:'#ef4444',label:'Tổng chi tiêu',value:fmt(exp)}),
-      
-      h(Stat,{icon:'Gauge',color:col,label:'Ngân sách đã dùng',value:budget?pct.toFixed(0)+'%':'—',sub:budget?'':'Chưa đặt ngân sách'})),
-    planCard,
-    !planOn&&D('card',
-      D('flex flex-wrap items-center justify-between gap-2 mb-3',
-        D('',D('font-semibold','Ngân sách tháng '+month.slice(5)+'/'+month.slice(0,4)),D('text-sm mu',budget?fmt(exp)+' / '+fmt(budget):'Đặt hạn mức chi tiêu để theo dõi tiến độ')),
-        eb?D('flex gap-2 items-center',h(AmtInp,{style:{width:170},autoFocus:true,placeholder:'VD: 10tr',value:bv,onChange:setBv}),h('button',{className:'btn pri',onClick:saveB},'Lưu'),h('button',{className:'ib',onClick:()=>setEb(false)},h(Ic,{n:'X',s:16}))):h('button',{className:'btn',onClick:()=>{setBv(budget?String(budget):'');setEb(true)}},h(Ic,{n:'Target',s:16}),budget?'Sửa':'Đặt ngân sách')),
-      budget>0&&D('',D('w-full h-3 rounded-full overflow-hidden',{style:{background:'var(--bg)'}}),null)&&D('',
-        h('div',{className:'w-full h-3 rounded-full overflow-hidden',style:{background:'var(--bg)',border:'1px solid var(--bd)'}},h('div',{style:{width:Math.min(pct,100)+'%',height:'100%',background:col,transition:'width .4s'}})),
-        D('flex justify-between text-xs mt-2',S('font-semibold',{style:{color:col}},pct>100?'Vượt hạn mức '+fmt(exp-budget):pct>90?'Cảnh báo: sắp hết ngân sách':pct>=70?'Chú ý: đã dùng phần lớn ngân sách':'Trong tầm kiểm soát'),S('mu','Còn lại: '+fmt(Math.max(budget-exp,0)))))),
-    hasChart&&D('grid lg:grid-cols-2 gap-3',
-      D('card',D('font-semibold mb-2','Chi tiêu theo danh mục'),pie.length?D('',h(R.ResponsiveContainer,{width:'100%',height:220},h(R.PieChart,null,h(R.Pie,{data:pie,dataKey:'value',nameKey:'name',innerRadius:55,outerRadius:90,paddingAngle:2,stroke:'none'},pie.map((p,i)=>h(R.Cell,{key:i,fill:p.color})),),h(R.Tooltip,{formatter:v=>fmt(v)}))),D('flex flex-wrap gap-x-3 gap-y-1 justify-center text-xs',pie.map(p=>S('inline-flex items-center gap-1',{key:p.name},h('i',{style:{width:8,height:8,borderRadius:4,background:p.color,display:'inline-block'}}),p.name+' '+Math.round(p.value/exp*100)+'%')))):D('h-[220px] flex items-center justify-center text-sm mu','Chưa có khoản chi trong tháng này')),
-      D('card',D('font-semibold mb-2','Thu nhập vs Chi tiêu (6 tháng)'),h(R.ResponsiveContainer,{width:'100%',height:250},h(R.BarChart,{data:bars,margin:{left:-10,right:4}},h(R.CartesianGrid,{strokeDasharray:'3 3',stroke:'#94a3b855',vertical:false}),h(R.XAxis,{dataKey:'name',tick:{fill:'#94a3b8',fontSize:11},axisLine:false,tickLine:false}),h(R.YAxis,{tick:{fill:'#94a3b8',fontSize:11},axisLine:false,tickLine:false,tickFormatter:short}),h(R.Tooltip,{formatter:v=>fmt(v),cursor:{fill:'#94a3b822'}}),h(R.Legend,{wrapperStyle:{fontSize:12}}),h(R.Bar,{dataKey:'Thu nhập',fill:'#22c55e',radius:[4,4,0,0]}),h(R.Bar,{dataKey:'Chi tiêu',fill:'#ef4444',radius:[4,4,0,0]}))))),
-    D('card',
-      D('flex flex-wrap items-center justify-between gap-2 mb-3',D('font-semibold','Giao dịch ('+list.length+')'),D('flex gap-2 flex-wrap',filt(ft,v=>{setFt(v);setFc('all')},[['all','Thu & Chi'],['expense','Chi tiêu'],['income','Thu nhập']]),filt(fc,setFc,[['all','Mọi danh mục'],...(ft==='income'?INC:ft==='expense'?EXP:ALL).map(c=>[c.id,c.name])]))),
-      list.length===0?D('text-center py-10',D('inline-flex p-4 rounded-full mb-3',{style:{background:'var(--bg)'}},null)&&h('div',{className:'inline-flex p-4 rounded-full mb-3',style:{background:'var(--bg)'}},h(Ic,{n:'ReceiptText',s:32,c:'var(--mu)'})),D('font-semibold',txs.length?'Không có giao dịch phù hợp':'Chưa có giao dịch nào'),D('text-sm mu mb-3',txs.length?'Thử đổi tháng hoặc bộ lọc.':'Bắt đầu bằng cách ghi lại khoản thu hoặc chi đầu tiên của bạn.'),h('button',{className:'btn pri',onClick:()=>setForm({})},h(Ic,{n:'Plus',s:16}),'Thêm giao dịch'))
-      :D('divide-y',list.map(t=>{const c=cat(t.cat);return h('div',{key:t.id,className:'flex items-center gap-3 py-3',style:{borderColor:'var(--bd)'}},
-        h('span',{className:'p-2 rounded-xl inline-flex shrink-0',style:{background:c.color+'22'}},h(Ic,{n:c.icon,c:c.color})),
-        D('min-w-0 flex-1',D('font-medium truncate',c.name),D('text-xs mu truncate',fmtDate(t.date)+(t.note?' · '+t.note:''))),
-        D('text-right font-bold text-sm shrink-0',h('span',{style:{color:t.type==='income'?'#22c55e':'#ef4444'}},(t.type==='income'?'+':'−')+fmt(t.amount))),
-        del===t.id?D('flex gap-1 shrink-0',h('button',{className:'btn',style:{padding:'4px 10px',color:'#ef4444'},onClick:()=>{setData(p=>({...p,txs:p.txs.filter(x=>x.id!==t.id)}));setDel(null);say('Đã xóa giao dịch')}},'Xóa?'),h('button',{className:'ib',onClick:()=>setDel(null)},h(Ic,{n:'X',s:16}))):D('flex shrink-0',h('button',{className:'ib',title:'Sửa',onClick:()=>setForm(t)},h(Ic,{n:'Pencil',s:16})),h('button',{className:'ib',title:'Xóa',onClick:()=>setDel(t.id)},h(Ic,{n:'Trash2',s:16}))))}))),
-    form&&h(Form,{init:form,onSave:save,onClose:()=>setForm(null)}),
-    bk&&h(Backup,{data,onImport:d=>{setData(d);say('Đã nhập dữ liệu')},onClose:()=>setBk(false)}),
-    toast&&D('fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] px-4 py-2 rounded-full text-sm font-semibold text-white shadow-lg',{style:{}},null)&&h('div',{className:'fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] px-4 py-2 rounded-full text-sm font-semibold text-white shadow-lg',style:{background:'#0f172a'}},toast));
-}
-ReactDOM.createRoot(document.getElementById('root')).render(h(App));
-</script>
+  <!-- ================= MAIN ================= -->
+  <main class="container" id="app">
+    <div id="banners" class="banners"></div>
+
+    <section class="stats" id="stats"></section>
+
+    <section id="scopePanel"></section>
+
+    <section class="grid-main">
+      <!-- Danh sách giao dịch -->
+      <div class="card tx-card">
+        <div class="card-head">
+          <h2>Giao dịch <span class="muted" id="txCount"></span></h2>
+          <div class="card-head-actions">
+            <button class="btn btn-ghost btn-sm" id="btnCopyRecurring" title="Tạo lại các khoản cố định của tháng trước">
+              <svg viewBox="0 0 24 24"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+              <span>Sao chép khoản cố định</span>
+            </button>
+            <button class="btn btn-primary btn-sm" id="btnAddTx">
+              <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+              <span>Thêm</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="tx-toolbar">
+          <div class="search">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <input type="search" id="txSearch" placeholder="Tìm theo tên, ghi chú, danh mục…" autocomplete="off">
+          </div>
+          <select id="txType" aria-label="Lọc loại">
+            <option value="all">Tất cả</option>
+            <option value="expense">Chi</option>
+            <option value="income">Thu</option>
+            <option value="transfer">Chuyển nội bộ</option>
+          </select>
+          <select id="txSort" aria-label="Sắp xếp">
+            <option value="newest">Mới nhất</option>
+            <option value="oldest">Cũ nhất</option>
+            <option value="high">Số tiền cao nhất</option>
+            <option value="low">Số tiền thấp nhất</option>
+          </select>
+        </div>
+
+        <ul class="tx-list" id="txList"></ul>
+      </div>
+
+      <!-- Biểu đồ -->
+      <div class="chart-col">
+        <div class="card">
+          <div class="card-head"><h2>Chi tiêu theo danh mục</h2></div>
+          <div class="donut-wrap">
+            <canvas id="donutChart" aria-label="Biểu đồ chi tiêu theo danh mục"></canvas>
+            <div class="donut-center" id="donutCenter"></div>
+          </div>
+          <ul class="legend" id="donutLegend"></ul>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Thu / Chi 6 tháng gần nhất</h2></div>
+          <div class="bar-wrap"><canvas id="barChart" aria-label="Biểu đồ thu chi 6 tháng"></canvas></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <button class="fab" id="fabAdd" aria-label="Thêm giao dịch">
+    <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+  </button>
+
+  <input type="file" id="fileRestore" accept=".json,application/json" hidden>
+
+  <!-- ================= MODAL: GIAO DỊCH ================= -->
+  <div class="modal" id="txModal" aria-hidden="true">
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="txModalTitle">
+      <div class="modal-head">
+        <h3 id="txModalTitle">Thêm giao dịch</h3>
+        <button class="icon-btn" data-close aria-label="Đóng"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+      <form id="txForm" class="modal-body" autocomplete="off">
+        <div class="seg" id="txTypeSeg">
+          <button type="button" data-type="expense" class="active">Khoản chi</button>
+          <button type="button" data-type="income">Khoản thu</button>
+        </div>
+
+        <label class="field">
+          <span>Số tiền</span>
+          <div class="amount-input">
+            <input type="text" inputmode="text" autocapitalize="off" spellcheck="false" id="txAmount" placeholder="VD: 50k, 1tr5, 2tr300k" required>
+            <em>đ</em>
+          </div>
+        </label>
+
+        <label class="field">
+          <span>Tên giao dịch</span>
+          <input type="text" id="txTitle" placeholder="VD: Ăn trưa, Tiền nhà…" maxlength="80">
+        </label>
+
+        <div class="field">
+          <span>Danh mục <button type="button" class="link-btn" id="txManageCats">Sửa danh mục</button></span>
+          <div class="cat-picker" id="txCatPicker"></div>
+        </div>
+
+        <div class="row-2">
+          <label class="field">
+            <span>Stack / Ngân hàng</span>
+            <select id="txStack"></select>
+          </label>
+          <label class="field">
+            <span>Ngày</span>
+            <input type="date" id="txDate" required>
+          </label>
+        </div>
+
+        <label class="field">
+          <span>Ghi chú</span>
+          <input type="text" id="txNote" placeholder="Không bắt buộc" maxlength="200">
+        </label>
+
+        <label class="check">
+          <input type="checkbox" id="txRecurring">
+          <span class="check-box"></span>
+          <span><b>Lặp lại hàng tháng</b><small>Tiền nhà, điện nước, lương… sẽ được gợi ý tạo lại ở tháng sau</small></span>
+        </label>
+
+        <div class="modal-foot">
+          <button type="button" class="btn btn-danger-ghost" id="txDelete" hidden>Xóa</button>
+          <span class="spacer"></span>
+          <button type="button" class="btn btn-ghost" data-close>Hủy</button>
+          <button type="submit" class="btn btn-primary">Lưu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: KẾ HOẠCH THÁNG ================= -->
+  <div class="modal" id="planModal" aria-hidden="true">
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="planModalTitle">
+      <div class="modal-head">
+        <h3 id="planModalTitle">Kế hoạch phân bổ</h3>
+        <button class="icon-btn" data-close aria-label="Đóng"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+      <form id="planForm" class="modal-body" autocomplete="off">
+        <p class="hint" id="planHint"></p>
+        <label class="field">
+          <span>Tổng thu nhập dự kiến</span>
+          <div class="amount-input"><input type="text" inputmode="text" autocapitalize="off" spellcheck="false" id="planIncome" placeholder="VD: 4tr"><em>đ</em></div>
+        </label>
+        <label class="field">
+          <span>Mục tiêu tiết kiệm <small class="muted">(khóa lại, không tiêu)</small></span>
+          <div class="amount-input"><input type="text" inputmode="text" autocapitalize="off" spellcheck="false" id="planSaving" placeholder="VD: 2tr"><em>đ</em></div>
+        </label>
+        <label class="field">
+          <span>Hạn mức được phép chi <button type="button" class="link-btn" id="planAuto">Tự tính = Thu − Tiết kiệm</button></span>
+          <div class="amount-input"><input type="text" inputmode="text" autocapitalize="off" spellcheck="false" id="planLimit" placeholder="VD: 2tr"><em>đ</em></div>
+        </label>
+        <div class="alloc-preview" id="planPreview"></div>
+        <div class="modal-foot">
+          <span class="spacer"></span>
+          <button type="button" class="btn btn-ghost" data-close>Hủy</button>
+          <button type="submit" class="btn btn-primary">Lưu kế hoạch</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: ỨNG TRƯỚC ================= -->
+  <div class="modal" id="advanceModal" aria-hidden="true">
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="advTitle">
+      <div class="modal-head">
+        <h3 id="advTitle">Ứng trước / Chuyển nội bộ</h3>
+        <button class="icon-btn" data-close aria-label="Đóng"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+      <form id="advanceForm" class="modal-body" autocomplete="off">
+        <div class="transfer-route">
+          <label class="field">
+            <span>Từ Stack (cho ứng)</span>
+            <select id="advFrom"></select>
+          </label>
+          <div class="route-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+          <label class="field">
+            <span>Sang Stack (nhận ứng)</span>
+            <select id="advTo"></select>
+          </label>
+        </div>
+        <p class="hint" id="advInfo"></p>
+        <label class="field">
+          <span>Số tiền ứng</span>
+          <div class="amount-input"><input type="text" inputmode="text" autocapitalize="off" spellcheck="false" id="advAmount" placeholder="VD: 500k" required><em>đ</em></div>
+        </label>
+        <div class="row-2">
+          <label class="field"><span>Ngày</span><input type="date" id="advDate" required></label>
+          <label class="field"><span>Ghi chú</span><input type="text" id="advNote" placeholder="Không bắt buộc" maxlength="120"></label>
+        </div>
+        <p class="hint small">Khoản ứng được ghi thành công nợ nội bộ, không tính vào Tổng thu / Tổng chi.</p>
+        <div class="modal-foot">
+          <span class="spacer"></span>
+          <button type="button" class="btn btn-ghost" data-close>Hủy</button>
+          <button type="submit" class="btn btn-primary">Xác nhận ứng</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: HOÀN TRẢ NỢ ================= -->
+  <div class="modal" id="repayModal" aria-hidden="true">
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="repayTitle">
+      <div class="modal-head">
+        <h3 id="repayTitle">Hoàn trả nợ nội bộ</h3>
+        <button class="icon-btn" data-close aria-label="Đóng"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+      <form id="repayForm" class="modal-body" autocomplete="off">
+        <div class="field">
+          <span>Chọn khoản nợ</span>
+          <div class="debt-options" id="repayOptions"></div>
+        </div>
+        <label class="field">
+          <span>Số tiền trả <button type="button" class="link-btn" id="repayFull">Trả hết</button></span>
+          <div class="amount-input"><input type="text" inputmode="text" autocapitalize="off" spellcheck="false" id="repayAmount" placeholder="VD: 500k" required><em>đ</em></div>
+        </label>
+        <div class="row-2">
+          <label class="field"><span>Ngày</span><input type="date" id="repayDate" required></label>
+          <label class="field"><span>Ghi chú</span><input type="text" id="repayNote" placeholder="Không bắt buộc" maxlength="120"></label>
+        </div>
+        <div class="modal-foot">
+          <span class="spacer"></span>
+          <button type="button" class="btn btn-ghost" data-close>Hủy</button>
+          <button type="submit" class="btn btn-primary">Hoàn trả</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: DANH MỤC ================= -->
+  <div class="modal" id="catModal" aria-hidden="true">
+    <div class="modal-box modal-wide" role="dialog" aria-modal="true" aria-labelledby="catTitle">
+      <div class="modal-head">
+        <h3 id="catTitle">Danh mục thu / chi</h3>
+        <button class="icon-btn" data-close aria-label="Đóng"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div class="modal-body">
+        <div class="seg" id="catTypeSeg">
+          <button type="button" data-type="expense" class="active">Danh mục chi</button>
+          <button type="button" data-type="income">Danh mục thu</button>
+        </div>
+        <ul class="cat-list" id="catList"></ul>
+
+        <form class="cat-form" id="catForm" autocomplete="off">
+          <h4 id="catFormTitle">Thêm danh mục mới</h4>
+          <div class="cat-form-row">
+            <div class="cat-preview" id="catPreview">🍜</div>
+            <label class="field grow">
+              <span>Tên danh mục</span>
+              <input type="text" id="catName" placeholder="VD: Cà phê" maxlength="30" required>
+            </label>
+          </div>
+          <div class="field">
+            <span>Icon <small class="muted">(chọn hoặc gõ emoji bất kỳ)</small></span>
+            <div class="emoji-grid" id="catEmojiGrid"></div>
+            <input type="text" id="catEmojiCustom" class="emoji-custom" placeholder="Gõ emoji khác…" maxlength="8">
+          </div>
+          <div class="field">
+            <span>Màu sắc</span>
+            <div class="swatches" id="catSwatches"></div>
+          </div>
+          <div class="modal-foot">
+            <button type="button" class="btn btn-ghost" id="catCancelEdit" hidden>Hủy sửa</button>
+            <span class="spacer"></span>
+            <button type="submit" class="btn btn-primary" id="catSubmit">Thêm danh mục</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: STACK ================= -->
+  <div class="modal" id="stackModal" aria-hidden="true">
+    <div class="modal-box modal-wide" role="dialog" aria-modal="true" aria-labelledby="stackTitle">
+      <div class="modal-head">
+        <h3 id="stackTitle">Quản lý Stack (Ngân hàng)</h3>
+        <button class="icon-btn" data-close aria-label="Đóng"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div class="modal-body">
+        <ul class="cat-list" id="stackList"></ul>
+        <form class="cat-form" id="stackForm" autocomplete="off">
+          <h4 id="stackFormTitle">Thêm Stack mới</h4>
+          <div class="cat-form-row">
+            <div class="cat-preview" id="stackPreview">🏦</div>
+            <label class="field grow">
+              <span>Tên Stack / Ngân hàng</span>
+              <input type="text" id="stackName" placeholder="VD: Vietcombank, Tiền mặt, Momo…" maxlength="30" required>
+            </label>
+          </div>
+          <div class="field">
+            <span>Icon</span>
+            <div class="emoji-grid" id="stackEmojiGrid"></div>
+          </div>
+          <div class="field">
+            <span>Màu nhận diện</span>
+            <div class="swatches" id="stackSwatches"></div>
+          </div>
+          <div class="modal-foot">
+            <button type="button" class="btn btn-ghost" id="stackCancelEdit" hidden>Hủy sửa</button>
+            <span class="spacer"></span>
+            <button type="submit" class="btn btn-primary" id="stackSubmit">Thêm Stack</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: XÁC NHẬN ================= -->
+  <div class="modal" id="confirmModal" aria-hidden="true">
+    <div class="modal-box modal-sm" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <div class="modal-body">
+        <h3 id="confirmTitle">Xác nhận</h3>
+        <p id="confirmMsg" class="confirm-msg"></p>
+        <div class="modal-foot">
+          <span class="spacer"></span>
+          <button type="button" class="btn btn-ghost" id="confirmNo">Hủy</button>
+          <button type="button" class="btn btn-danger" id="confirmYes">Đồng ý</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <!-- Thư viện biểu đồ (nếu offline, app vẫn chạy, chỉ ẩn biểu đồ) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+  <!-- Thứ tự quan trọng: utils -> store (state) -> ledger (stack & công nợ) -> charts -> app (UI) -->
+  <script src="js/utils.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/ledger.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
