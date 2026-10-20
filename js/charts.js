@@ -22,7 +22,7 @@ const Charts = (() => {
   function expenseByCategory(month, stackId) {
     const map = new Map();
     Store.get().transactions.forEach((t) => {
-      if (t.type !== 'expense' || U.monthOf(t.date) !== month) return;
+      if (t.type !== 'expense' || U.monthOf(t.date) !== month || !Store.isCounted(t)) return;
       if (stackId && t.stackId !== stackId) return;
       map.set(t.categoryId, (map.get(t.categoryId) || 0) + t.amount);
     });
@@ -41,6 +41,7 @@ const Charts = (() => {
     const expense = months.map(() => 0);
     Store.get().transactions.forEach((t) => {
       if (stackId && t.stackId !== stackId) return;
+      if (!Store.isCounted(t)) return;
       const idx = months.indexOf(U.monthOf(t.date));
       if (idx < 0) return;
       if (t.type === 'income') income[idx] += t.amount; else expense[idx] += t.amount;

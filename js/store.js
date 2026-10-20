@@ -9,7 +9,8 @@
  *   stacks:       [{ id, name, color, icon }],
  *   plans:        { [stackId]: { ["YYYY-MM"]: { income, saving, limit } } },
  *   transactions: [{ id, stackId, type:'income'|'expense', amount, categoryId,
- *                    title, note, date:'YYYY-MM-DD', recurring, seriesId, createdAt }],
+ *                    title, note, date:'YYYY-MM-DD', recurring, paid, seriesId, createdAt }],
+ *      (paid: chỉ có ý nghĩa với khoản CHI cố định — chưa tick thì KHÔNG tính vào tổng chi)
  *   transfers:    [{ id, kind:'advance'|'repay', fromStackId, toStackId,
  *                    amount, date, note, createdAt }],
  *   categories:   [{ id, type, name, icon, color }],
@@ -84,6 +85,7 @@ const Store = (() => {
         note: t.note || '',
         date: t.date,
         recurring: !!t.recurring,
+        paid: t.paid === undefined ? true : !!t.paid, // dữ liệu cũ: coi như đã chi
         seriesId: t.seriesId || null,
         createdAt: t.createdAt || Date.now(),
       }));
@@ -145,7 +147,7 @@ const Store = (() => {
         categoryId: findOrCreateCat(catName, type),
         title: String(o.title ?? o.name ?? o.description ?? o.ten ?? catName ?? ''),
         note: String(o.note ?? o.ghiChu ?? ''),
-        date, recurring: false, seriesId: null, createdAt: Date.now(),
+        date, recurring: false, paid: true, seriesId: null, createdAt: Date.now(),
       });
       imported++;
     });
@@ -275,6 +277,7 @@ const Store = (() => {
       note: (tx.note || '').trim(),
       date: tx.date,
       recurring: !!tx.recurring,
+      paid: tx.paid === undefined ? true : !!tx.paid,
       seriesId: tx.seriesId || null,
       createdAt: Date.now(),
     };
@@ -294,6 +297,20 @@ const Store = (() => {
 
   function deleteTransaction(id) {
     state.transactions = state.transactions.filter((t) => t.id !== id);
+    commit();
+  }
+
+  /** Khoản chi cố định (lặp lại hàng tháng) — loại duy nhất cần tick "đã chi trả" */
+  const isFixedExpense = (t) => t.type === 'expense' && !!t.recurring;
+
+  /** Giao dịch có được tính vào Tổng chi / biểu đồ / số dư không?
+   *  Khoản chi cố định chỉ được tính khi đã tick "đã chi trả". */
+  const isCounted = (t) => !isFixedExpense(t) || t.paid !== false;
+
+  function setPaid(id, paid) {
+    const t = state.transactions.find((x) => x.id === id);
+    if (!t || !isFixedExpense(t)) return;
+    t.paid = !!paid;
     commit();
   }
 
@@ -367,6 +384,7 @@ const Store = (() => {
         id: U.uid(),
         date: U.sameDayInMonth(src.date, month),
         seriesId: src.seriesId || src.id,
+        paid: false, // tháng mới: chưa chi trả
         createdAt: Date.now(),
       });
     });
@@ -409,7 +427,7 @@ const Store = (() => {
     load, subscribe, get, getStack, getCategory, categoriesOf,
     addStack, updateStack, deleteStack,
     getPlan, setPlan,
-    addTransaction, updateTransaction, deleteTransaction,
+    addTransaction, updateTransaction, deleteTransaction, setPaid, isFixedExpense, isCounted,
     addCategory, updateCategory, deleteCategory, countCategoryUsage,
     addTransfer, removeTransfer,
     pendingRecurring, copyRecurring, isRecurringDismissed, dismissRecurring,

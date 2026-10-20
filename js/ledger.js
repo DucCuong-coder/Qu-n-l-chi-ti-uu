@@ -95,9 +95,10 @@ const Ledger = (() => {
   /** Số liệu của 1 Stack trong 1 tháng */
   function stackMonth(stackId, month) {
     const s = Store.get();
-    let income = 0, expense = 0;
+    let income = 0, expense = 0, unpaid = 0;
     s.transactions.forEach((t) => {
       if (t.stackId !== stackId || U.monthOf(t.date) !== month) return;
+      if (!Store.isCounted(t)) { unpaid += t.amount; return; } // chi cố định chưa trả
       if (t.type === 'income') income += t.amount; else expense += t.amount;
     });
 
@@ -120,7 +121,7 @@ const Ledger = (() => {
     const balance = income - expense + netTransfer;    // Số dư khả dụng thực tế trong tháng
 
     return {
-      income, expense, balance, plan, flow, netTransfer, spendLimit, remaining,
+      income, expense, unpaid, balance, plan, flow, netTransfer, spendLimit, remaining,
       usedPct: spendLimit > 0 ? Math.min(100, (expense / spendLimit) * 100) : (expense > 0 ? 100 : 0),
     };
   }
@@ -134,7 +135,7 @@ const Ledger = (() => {
     const plannedIncome = perStack.reduce((a, x) => a + x.plan.income, 0);
     const income = sum('income'), expense = sum('expense');
     return {
-      perStack, income, expense, limit, saving, plannedIncome,
+      perStack, income, expense, unpaid: sum('unpaid'), limit, saving, plannedIncome,
       balance: income - expense,
       spendLimit: limit,
       remaining: limit - expense,

@@ -235,8 +235,10 @@
 
   function countTx(type) {
     const sid = scopeId();
-    return Store.get().transactions.filter((t) => t.type === type && U.monthOf(t.date) === view.month && (!sid || t.stackId === sid)).length;
+    return Store.get().transactions.filter((t) => t.type === type && Store.isCounted(t) && U.monthOf(t.date) === view.month && (!sid || t.stackId === sid)).length;
   }
+
+  const expSub = (n, unpaid) => `${n} khoản chi` + (unpaid > 0 ? ` · <span class="unpaid-note">còn ${U.fmt(unpaid)} cố định chưa trả</span>` : '');
 
   function renderStats() {
     const sid = scopeId();
@@ -247,7 +249,7 @@
       const over = o.remaining < 0;
       html = statCard('income', 'Tổng thu nhập', U.fmt(o.income),
           o.plannedIncome ? `Dự kiến ${U.fmt(o.plannedIncome)}` : `${nInc} khoản thu`)
-        + statCard('expense', 'Tổng chi tiêu', U.fmt(o.expense), `${nExp} khoản chi`)
+        + statCard('expense', 'Tổng chi tiêu', U.fmt(o.expense), expSub(nExp, o.unpaid))
         + statCard('balance', 'Số dư', U.fmt(o.balance), 'Thu − Chi (không tính chuyển nội bộ)')
         + (o.hasPlan
           ? statCard('budget' + (over ? ' over' : ''), 'Ngân sách còn lại', U.fmt(o.remaining),
@@ -263,7 +265,7 @@
         ? `<span class="hide-sm"> (${U.fmt(s.plan.limit)} ${s.netTransfer > 0 ? '+' : '−'} ${U.fmt(Math.abs(s.netTransfer))} nội bộ)</span>` : '';
       html = statCard('income', 'Tổng thu nhập', U.fmt(s.income),
           s.plan.income ? `Dự kiến ${U.fmt(s.plan.income)}` : `${nInc} khoản thu`)
-        + statCard('expense', 'Tổng chi tiêu', U.fmt(s.expense), `${nExp} khoản chi`)
+        + statCard('expense', 'Tổng chi tiêu', U.fmt(s.expense), expSub(nExp, s.unpaid))
         + statCard('balance', 'Số dư khả dụng', U.fmt(s.balance), transferNote)
         + (s.plan.empty && !s.netTransfer
           ? statCard('budget', 'Hạn mức còn lại', 'Chưa đặt', 'Bấm "Đặt kế hoạch" bên dưới')
@@ -417,10 +419,15 @@
       const t = x.t;
       const st = Store.getStack(t.stackId);
       const sign = t.type === 'income' ? '+' : '−';
-      return `<li class="tx" data-kind="tx" data-id="${t.id}">
+      const fixedExp = Store.isFixedExpense(t);
+      const paidChip = fixedExp
+        ? `<button type="button" class="paid-chip ${t.paid ? 'on' : ''}" data-paid role="checkbox" aria-checked="${!!t.paid}" title="${t.paid ? 'Bấm để bỏ ghi nhận đã chi trả' : 'Bấm để ghi nhận đã chi trả'}"><span class="pc-box"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>${t.paid ? 'Đã chi trả' : 'Chưa trả'}</button>`
+        : '';
+      return `<li class="tx ${fixedExp && !t.paid ? 'unpaid' : ''}" data-kind="tx" data-id="${t.id}">
         <span class="tx-ico" style="--c:${x.cat.color}">${esc(x.cat.icon)}</span>
         <div class="tx-main">
           <div class="tx-title">${esc(t.title || x.cat.name)}${t.recurring ? '<span class="tag-rec" title="Lặp lại hàng tháng">🔁<span class="tag-txt"> Cố định</span></span>' : ''}</div>
+          ${paidChip ? `<div class="tx-paid-row">${paidChip}</div>` : ''}
           <div class="tx-meta">
             <span>${esc(x.cat.name)}</span>
             ${!sid && st ? `<span class="sep">•</span><span class="chip-stack" style="--c:${st.color}">${esc(st.name)}</span>` : ''}
@@ -467,7 +474,7 @@
         lastDate = x.date;
         const [y, m, d] = x.date.split('-').map(Number);
         const wd = WEEKDAYS[new Date(y, m - 1, d).getDay()];
-        const dayNet = list.filter((i) => i.date === x.date && i.kind === 'tx')
+        const dayNet = list.filter((i) => i.date === x.date && i.kind === 'tx' && Store.isCounted(i.t))
           .reduce((a, i) => a + (i.type === 'income' ? i.amount : -i.amount), 0);
         html += `<li class="tx-day"><span>${wd}, ${U.dateLabel(x.date)}${x.date === U.todayStr() ? ' · Hôm nay' : ''}</span>
           <span class="num">${dayNet ? (dayNet > 0 ? '+' : '−') + U.fmt(Math.abs(dayNet)) : ''}</span></li>`;
@@ -481,6 +488,13 @@
     const row = e.target.closest('.tx');
     if (!row) return;
     const { kind, id } = row.dataset;
+    if (e.target.closest('[data-paid]')) {
+      const t = Store.get().transactions.find((x) => x.id === id);
+      if (!t) return;
+      Store.setPaid(id, !t.paid);
+      toast(!t.paid ? `Đã ghi nhận chi trả “${t.title || 'khoản cố định'}” (${U.fmt(t.amount)})` : `Đã bỏ ghi nhận chi trả “${t.title || 'khoản cố định'}”`);
+      return;
+    }
     if (e.target.closest('[data-del]')) {
       if (kind === 'tx') {
         const t = Store.get().transactions.find((x) => x.id === id);
@@ -551,7 +565,15 @@
     txForm.type = type;
     $('txTypeSeg').querySelectorAll('button').forEach((b) => b.classList.toggle('active', b.dataset.type === type));
     renderCatPicker();
+    syncPaidField();
   }
+
+  /** Ô "Đã chi trả" chỉ hiện với khoản CHI có bật "Lặp lại hàng tháng" */
+  function syncPaidField() {
+    const show = txForm.type === 'expense' && $('txRecurring').checked;
+    $('txPaidWrap').style.display = show ? '' : 'none';
+  }
+  $('txRecurring').addEventListener('change', syncPaidField);
 
   function openTxModal(tx) {
     txForm.editingId = tx?.id || null;
@@ -565,6 +587,8 @@
     $('txTitle').value = tx?.title || '';
     $('txNote').value = tx?.note || '';
     $('txRecurring').checked = !!tx?.recurring;
+    $('txPaid').checked = tx ? tx.paid !== false : false;
+    syncPaidField();
     $('txStack').value = tx?.stackId || scopeId() || Store.get().stacks[0].id;
     $('txDate').value = tx?.date || (view.month === U.currentMonth() ? U.todayStr() : `${view.month}-01`);
     Modal.open('txModal');
@@ -597,6 +621,8 @@
       date: $('txDate').value || U.todayStr(),
       recurring: $('txRecurring').checked,
     };
+    // Chi cố định: theo ô tick. Các loại khác luôn được tính.
+    data.paid = (data.type === 'expense' && data.recurring) ? $('txPaid').checked : true;
     if (txForm.editingId) {
       const old = Store.get().transactions.find((t) => t.id === txForm.editingId);
       if (!data.recurring && old?.recurring) data.seriesId = old.seriesId; // giữ chuỗi để không bị gợi ý lại
@@ -1080,8 +1106,9 @@
         'Tên giao dịch': t.title,
         'Ghi chú': t.note,
         'Số tiền': t.amount,
-        'Thu/Chi (+/−)': t.type === 'income' ? t.amount : -t.amount,
+        'Thu/Chi (+/−)': !Store.isCounted(t) ? 0 : (t.type === 'income' ? t.amount : -t.amount),
         'Lặp lại hàng tháng': t.recurring ? 'Có' : '',
+        'Đã chi trả (khoản cố định)': Store.isFixedExpense(t) ? (t.paid ? 'Đã trả' : 'Chưa trả') : '',
       };
     });
     const transfers = [...st.transfers].sort((a, b) => a.date.localeCompare(b.date)).map((t) => ({
@@ -1113,7 +1140,7 @@
         }
         XLSX.utils.book_append_sheet(wb, ws, name);
       };
-      addSheet(tx, 'Giao dịch', [12, 14, 18, 7, 16, 26, 26, 14, 14, 10], [7, 8]);
+      addSheet(tx, 'Giao dịch', [12, 14, 18, 7, 16, 26, 26, 14, 14, 10, 22], [7, 8]);
       addSheet(transfers, 'Chuyển nội bộ', [12, 14, 18, 18, 14, 26], [4]);
       addSheet(debts, 'Công nợ hiện tại', [18, 18, 14], [2]);
       XLSX.writeFile(wb, `chi-tieu-${U.todayStr()}.xlsx`);
