@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Quản lý chi tiêu</title>
-  <meta name="theme-color" content="#eceff2">
+  <meta name="theme-color" content="#0a0918">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,500..800&display=swap" rel="stylesheet">
@@ -19,7 +19,7 @@
       } catch (e) { document.documentElement.setAttribute('data-theme', 'light'); }
     })();
   </script>
-  <link rel="stylesheet" href="css/style.css?v=3">
+  <link rel="stylesheet" href="css/style.css?v=4">
 </head>
 <body>
 
@@ -101,12 +101,11 @@
   <main class="container" id="app">
     <div id="banners" class="banners"></div>
 
-    <section class="stats" id="stats"></section>
-
-    <section id="scopePanel"></section>
-
-    <section class="grid-main">
-      <div class="ledger-col">
+    <div class="layout">
+      <!-- Cột chính: số liệu, Stack, danh sách -->
+      <div class="main-col">
+        <section class="stats" id="stats"></section>
+        <section class="scope-panel" id="scopePanel"></section>
         <!-- Lọc chung cho cả 2 thẻ -->
         <div class="tx-toolbar">
           <div class="search">
@@ -153,8 +152,9 @@
         </div>
       </div>
 
-      <!-- Biểu đồ -->
-      <div class="chart-col">
+      <!-- Cột phụ: công nợ & biểu đồ -->
+      <aside class="side-col">
+        <div class="card debt-card" id="debtPanel"></div>
         <div class="card">
           <div class="card-head"><h2>Chi tiêu theo danh mục</h2></div>
           <div class="donut-wrap">
@@ -167,8 +167,8 @@
           <div class="card-head"><h2>Thu / Chi 6 tháng gần nhất</h2></div>
           <div class="bar-wrap"><canvas id="barChart" aria-label="Biểu đồ thu chi 6 tháng"></canvas></div>
         </div>
-      </div>
-    </section>
+      </aside>
+    </div>
   </main>
 
   <button class="fab" id="fabAdd" aria-label="Thêm giao dịch">
@@ -443,10 +443,10 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 
   <!-- Thứ tự quan trọng: utils -> store (state) -> ledger (stack & công nợ) -> charts -> app (UI) -->
-  <script src="js/utils.js?v=3"></script>
-  <script src="js/store.js?v=3"></script>
-  <script src="js/ledger.js?v=3"></script>
-  <script src="js/charts.js?v=3"></script>
-  <script src="js/app.js?v=3"></script>
+  <script src="js/utils.js?v=4"></script>
+  <script src="js/store.js?v=4"></script>
+  <script src="js/ledger.js?v=4"></script>
+  <script src="js/charts.js?v=4"></script>
+  <script src="js/app.js?v=4"></script>
 </body>
 </html>

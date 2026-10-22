@@ -323,14 +323,12 @@
           </div>` : ''}
         </button>`;
       }).join('');
-      $('scopePanel').innerHTML = `<div class="overview-panel">
-        <div class="card"><div class="card-head"><h2>Các Stack (Ngân hàng)</h2>
+      $('scopePanel').innerHTML = `<div class="card"><div class="card-head"><h2>Các Stack (Ngân hàng)</h2>
           <button class="btn btn-ghost btn-sm" data-act="manage-stacks">Quản lý</button></div>
-          <div class="stack-grid">${cards}</div></div>
-        <div class="card debt-card"><div class="card-head"><h2>Công nợ nội bộ</h2>
+          <div class="stack-grid">${cards}</div></div>`;
+      $('debtPanel').innerHTML = `<div class="card-head"><h2>Công nợ nội bộ</h2>
           <button class="btn btn-ghost btn-sm" data-act="advance" ${Store.get().stacks.length < 2 ? 'disabled' : ''}>⇄ Ứng trước</button></div>
-          <ul class="debt-list">${debtItemsHtml(debts, 'all')}</ul></div>
-      </div>`;
+          <ul class="debt-list">${debtItemsHtml(debts, 'all')}</ul>`;
       return;
     }
 
@@ -346,8 +344,8 @@
     if (s.flow.advOut) transferBits.push(`−${U.fmt(s.flow.advOut)} cho ứng`);
     if (s.flow.repOut) transferBits.push(`−${U.fmt(s.flow.repOut)} đã trả nợ`);
 
-    $('scopePanel').innerHTML = `<div class="stack-panel">
-      <div class="stack-hero" style="--c:${st.color}">
+    $('scopePanel').innerHTML = `
+      <div class="card stack-hero" style="--c:${st.color}">
         <div class="hero-top">
           <div class="hero-name"><span class="h-ico">${esc(st.icon)}</span>${esc(st.name)}</div>
           <span class="hero-tag">${planTag}</span>
@@ -358,8 +356,8 @@
           <div><small>Hạn mức chi</small><b class="num">${U.fmt(s.plan.limit)}</b></div>
         </div>
         ${owes.length || lends.length ? `<div class="hero-badges">
-          ${owes.map((d) => `<span class="badge on-hero">⚠️ Đang nợ ${esc(stackName(d.stackId))}: ${U.fmt(d.amount)}</span>`).join('')}
-          ${lends.map((d) => `<span class="badge on-hero lend">📥 Cho ${esc(stackName(d.stackId))} ứng: ${U.fmt(d.amount)}</span>`).join('')}
+          ${owes.map((d) => `<span class="badge">⚠️ Đang nợ ${esc(stackName(d.stackId))}: ${U.fmt(d.amount)}</span>`).join('')}
+          ${lends.map((d) => `<span class="badge lend">📥 Cho ${esc(stackName(d.stackId))} ứng: ${U.fmt(d.amount)}</span>`).join('')}
         </div>` : ''}
         <div class="hero-bar">
           ${progress(s.usedPct, over)}
@@ -369,21 +367,19 @@
           </div>
         </div>
         <div class="hero-actions">
-          <button class="btn btn-white btn-sm" data-act="plan">${s.plan.empty ? '＋ Đặt kế hoạch' : '✎ Sửa kế hoạch'}</button>
-          <button class="btn btn-glass btn-sm" data-act="advance" data-to="${sid}" ${Store.get().stacks.length < 2 ? 'disabled' : ''}>⇄ Ứng trước</button>
-          ${owes.length ? `<button class="btn btn-glass btn-sm" data-act="repay" data-debtor="${sid}">↩ Hoàn trả nợ nội bộ</button>` : ''}
+          <button class="btn btn-primary btn-sm" data-act="plan">${s.plan.empty ? '＋ Đặt kế hoạch' : '✎ Sửa kế hoạch'}</button>
+          <button class="btn btn-ghost btn-sm" data-act="advance" data-to="${sid}" ${Store.get().stacks.length < 2 ? 'disabled' : ''}>⇄ Ứng trước</button>
+          ${owes.length ? `<button class="btn btn-ghost btn-sm" data-act="repay" data-debtor="${sid}">↩ Hoàn trả nợ nội bộ</button>` : ''}
         </div>
-      </div>
-      <div class="card debt-card">
-        <div class="card-head"><h2>Công nợ nội bộ của ${esc(st.name)}</h2></div>
-        <ul class="debt-list">
-          ${owes.length || lends.length
-            ? debtItemsHtml(owes.map((d) => ({ debtor: sid, creditor: d.stackId, amount: d.amount })), 'owe')
-              + debtItemsHtml(lends.map((d) => ({ debtor: d.stackId, creditor: sid, amount: d.amount })), 'lend')
-            : '<li class="empty-mini">Không nợ ai, không ai nợ 🎉</li>'}
-        </ul>
-      </div>
-    </div>`;
+      </div>`;
+    $('debtPanel').innerHTML = `
+      <div class="card-head"><h2>Công nợ của ${esc(st.name)}</h2></div>
+      <ul class="debt-list">
+        ${owes.length || lends.length
+          ? debtItemsHtml(owes.map((d) => ({ debtor: sid, creditor: d.stackId, amount: d.amount })), 'owe')
+            + debtItemsHtml(lends.map((d) => ({ debtor: d.stackId, creditor: sid, amount: d.amount })), 'lend')
+          : '<li class="empty-mini">Không nợ ai, không ai nợ 🎉</li>'}
+      </ul>`;
   }
 
   /* ---------- Danh sách giao dịch ---------- */
@@ -1209,7 +1205,7 @@
    * ===================================================== */
   function applyThemeMeta() {
     const dark = document.documentElement.getAttribute('data-theme') === 'dark';
-    document.querySelector('meta[name="theme-color"]').content = dark ? '#0d1216' : '#eceff2';
+    document.querySelector('meta[name="theme-color"]').content = dark ? '#0a0918' : '#f3f1fa';
   }
   $('btnTheme').addEventListener('click', () => {
     const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
