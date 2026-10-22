@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Quản lý chi tiêu</title>
-  <meta name="theme-color" content="#f4f6fb">
+  <meta name="theme-color" content="#eceff2">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,500..800&display=swap" rel="stylesheet">
 
   <!-- Áp theme trước khi vẽ trang để không bị nháy màu -->
   <script>
@@ -19,25 +19,7 @@
       } catch (e) { document.documentElement.setAttribute('data-theme', 'light'); }
     })();
   </script>
-  <link rel="stylesheet" href="css/style.css">
-  <style>
-    /* Ô tick "Đã chi trả" cho khoản chi cố định */
-    .tx-paid-row { margin: 3px 0 2px; }
-    .paid-chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 6px;
-      border: 1px solid var(--border); border-radius: 999px; background: transparent; color: var(--text-2);
-      font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; line-height: 1.4; }
-    .paid-chip .pc-box { width: 16px; height: 16px; border-radius: 5px; border: 1.5px solid currentColor;
-      display: inline-flex; align-items: center; justify-content: center; flex: none; }
-    .paid-chip .pc-box svg { width: 12px; height: 12px; fill: none; stroke: #fff; stroke-width: 3;
-      stroke-linecap: round; stroke-linejoin: round; opacity: 0; }
-    .paid-chip.on { color: var(--green); border-color: var(--green); }
-    .paid-chip.on .pc-box { background: var(--green); border-color: var(--green); }
-    .paid-chip.on .pc-box svg { opacity: 1; }
-    .paid-chip:hover { border-color: var(--green); }
-    .tx.unpaid .tx-amt, .tx.unpaid .tx-ico { opacity: .45; }
-    .tx.unpaid .tx-amt { text-decoration: line-through; }
-    .unpaid-note { color: var(--amber, #d97706); font-weight: 600; }
-  </style>
+  <link rel="stylesheet" href="css/style.css?v=3">
 </head>
 <body>
 
@@ -57,6 +39,7 @@
           <h1>Quản lý chi tiêu</h1>
           <p id="brandSub">Tổng quan tất cả</p>
         </div>
+        <div class="head-balance" id="headBalance" aria-live="polite"></div>
       </div>
 
       <div class="header-controls">
@@ -123,22 +106,8 @@
     <section id="scopePanel"></section>
 
     <section class="grid-main">
-      <!-- Danh sách giao dịch -->
-      <div class="card tx-card">
-        <div class="card-head">
-          <h2>Giao dịch <span class="muted" id="txCount"></span></h2>
-          <div class="card-head-actions">
-            <button class="btn btn-ghost btn-sm" id="btnCopyRecurring" title="Tạo lại các khoản cố định của tháng trước">
-              <svg viewBox="0 0 24 24"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
-              <span>Sao chép khoản cố định</span>
-            </button>
-            <button class="btn btn-primary btn-sm" id="btnAddTx">
-              <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-              <span>Thêm</span>
-            </button>
-          </div>
-        </div>
-
+      <div class="ledger-col">
+        <!-- Lọc chung cho cả 2 thẻ -->
         <div class="tx-toolbar">
           <div class="search">
             <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
@@ -156,9 +125,32 @@
             <option value="high">Số tiền cao nhất</option>
             <option value="low">Số tiền thấp nhất</option>
           </select>
+          <button class="btn btn-primary" id="btnAddTx">
+            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            <span>Thêm giao dịch</span>
+          </button>
         </div>
 
-        <ul class="tx-list" id="txList"></ul>
+        <!-- Giao dịch thường -->
+        <div class="card list-card">
+          <div class="card-head">
+            <h2>Giao dịch <span class="count" id="txCount"></span></h2>
+          </div>
+          <ul class="tx-list scroll" id="txList"></ul>
+        </div>
+
+        <!-- Khoản cố định hàng tháng -->
+        <div class="card list-card fixed-card">
+          <div class="card-head">
+            <h2>Khoản cố định <span class="count" id="fixedCount"></span></h2>
+            <button class="btn btn-ghost btn-sm" id="btnCopyRecurring" title="Tạo lại các khoản cố định của tháng trước">
+              <svg viewBox="0 0 24 24"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+              <span>Sao chép từ tháng trước</span>
+            </button>
+          </div>
+          <div class="fixed-summary" id="fixedSummary"></div>
+          <ul class="tx-list scroll" id="fixedList"></ul>
+        </div>
       </div>
 
       <!-- Biểu đồ -->
@@ -241,7 +233,7 @@
         <label class="check" id="txPaidWrap" style="display:none">
           <input type="checkbox" id="txPaid">
           <span class="check-box"></span>
-          <span><b>Đã chi trả</b><small>Chỉ khi tick, khoản cố định này mới được tính vào Tổng chi tiêu</small></span>
+          <span><b>Đã chi trả</b><small>Chỉ khoản đã trả mới được tính vào Tổng chi tiêu</small></span>
         </label>
 
         <div class="modal-foot">
@@ -451,10 +443,10 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 
   <!-- Thứ tự quan trọng: utils -> store (state) -> ledger (stack & công nợ) -> charts -> app (UI) -->
-  <script src="js/utils.js"></script>
-  <script src="js/store.js"></script>
-  <script src="js/ledger.js"></script>
-  <script src="js/charts.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/utils.js?v=3"></script>
+  <script src="js/store.js?v=3"></script>
+  <script src="js/ledger.js?v=3"></script>
+  <script src="js/charts.js?v=3"></script>
+  <script src="js/app.js?v=3"></script>
 </body>
 </html>

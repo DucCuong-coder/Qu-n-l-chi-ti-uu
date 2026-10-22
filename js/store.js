@@ -10,7 +10,7 @@
  *   plans:        { [stackId]: { ["YYYY-MM"]: { income, saving, limit } } },
  *   transactions: [{ id, stackId, type:'income'|'expense', amount, categoryId,
  *                    title, note, date:'YYYY-MM-DD', recurring, paid, seriesId, createdAt }],
- *      (paid: chỉ có ý nghĩa với khoản CHI cố định — chưa tick thì KHÔNG tính vào tổng chi)
+ *      (paid: chỉ có ý nghĩa với khoản CHI — chưa tick thì KHÔNG tính vào tổng chi)
  *   transfers:    [{ id, kind:'advance'|'repay', fromStackId, toStackId,
  *                    amount, date, note, createdAt }],
  *   categories:   [{ id, type, name, icon, color }],
@@ -300,16 +300,16 @@ const Store = (() => {
     commit();
   }
 
-  /** Khoản chi cố định (lặp lại hàng tháng) — loại duy nhất cần tick "đã chi trả" */
-  const isFixedExpense = (t) => t.type === 'expense' && !!t.recurring;
+  /** Mọi khoản CHI (cố định hay không) đều có ô tick "đã chi trả" */
+  const isPayable = (t) => t.type === 'expense';
 
   /** Giao dịch có được tính vào Tổng chi / biểu đồ / số dư không?
-   *  Khoản chi cố định chỉ được tính khi đã tick "đã chi trả". */
-  const isCounted = (t) => !isFixedExpense(t) || t.paid !== false;
+   *  Khoản chi chỉ được tính khi đã tick "đã chi trả". */
+  const isCounted = (t) => !isPayable(t) || t.paid !== false;
 
   function setPaid(id, paid) {
     const t = state.transactions.find((x) => x.id === id);
-    if (!t || !isFixedExpense(t)) return;
+    if (!t || !isPayable(t)) return;
     t.paid = !!paid;
     commit();
   }
@@ -427,7 +427,7 @@ const Store = (() => {
     load, subscribe, get, getStack, getCategory, categoriesOf,
     addStack, updateStack, deleteStack,
     getPlan, setPlan,
-    addTransaction, updateTransaction, deleteTransaction, setPaid, isFixedExpense, isCounted,
+    addTransaction, updateTransaction, deleteTransaction, setPaid, isPayable, isCounted,
     addCategory, updateCategory, deleteCategory, countCategoryUsage,
     addTransfer, removeTransfer,
     pendingRecurring, copyRecurring, isRecurringDismissed, dismissRecurring,

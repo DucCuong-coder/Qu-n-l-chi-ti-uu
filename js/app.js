@@ -152,12 +152,23 @@
     $('monthLabel').textContent = U.monthLabel(view.month);
     $('monthPicker').value = view.month;
 
+    renderHeaderBalance();
     renderTabs();
     renderBanners();
     renderStats();
     renderScopePanel();
     renderTxList();
     Charts.render(view.month, scopeId());
+  }
+
+  /* ---------- Số dư tổng trên header (luôn là Tổng quan tất cả) ---------- */
+  function renderHeaderBalance() {
+    const o = Ledger.overviewMonth(view.month);
+    const el = $('headBalance');
+    el.classList.toggle('neg', o.balance < 0);
+    el.title = 'Thu − Chi của mọi Stack (không tính chuyển nội bộ)';
+    el.innerHTML = `<small>Số dư ${esc(U.monthLabel(view.month).toLowerCase())}</small>
+      <b class="num">${o.balance < 0 ? '−' : ''}${U.fmt(Math.abs(o.balance))}</b>`;
   }
 
   /* ---------- Tabs Stack ---------- */
@@ -238,7 +249,7 @@
     return Store.get().transactions.filter((t) => t.type === type && Store.isCounted(t) && U.monthOf(t.date) === view.month && (!sid || t.stackId === sid)).length;
   }
 
-  const expSub = (n, unpaid) => `${n} khoản chi` + (unpaid > 0 ? ` · <span class="unpaid-note">còn ${U.fmt(unpaid)} cố định chưa trả</span>` : '');
+  const expSub = (n, unpaid) => `${n} khoản đã trả` + (unpaid > 0 ? `<br><span class="unpaid-note">Còn ${U.fmt(unpaid)} chưa trả</span>` : '');
 
   function renderStats() {
     const sid = scopeId();
@@ -250,7 +261,6 @@
       html = statCard('income', 'Tổng thu nhập', U.fmt(o.income),
           o.plannedIncome ? `Dự kiến ${U.fmt(o.plannedIncome)}` : `${nInc} khoản thu`)
         + statCard('expense', 'Tổng chi tiêu', U.fmt(o.expense), expSub(nExp, o.unpaid))
-        + statCard('balance', 'Số dư', U.fmt(o.balance), 'Thu − Chi (không tính chuyển nội bộ)')
         + (o.hasPlan
           ? statCard('budget' + (over ? ' over' : ''), 'Ngân sách còn lại', U.fmt(o.remaining),
               `Đã chi ${o.usedPct.toFixed(0)}% / ${U.fmt(o.limit)} · Tiết kiệm ${U.fmt(o.saving)}`, progress(o.usedPct, over))
@@ -273,6 +283,7 @@
               `Đã chi ${U.fmt(s.expense)} / ${U.fmt(s.spendLimit)}${limitNote}`, progress(s.usedPct, over)));
     }
     $('stats').innerHTML = html;
+    $('stats').classList.toggle('three', !sid); // Tổng quan: Số dư đã lên header
   }
 
   /* ---------- Panel kế hoạch / công nợ ---------- */
@@ -413,29 +424,36 @@
     return list.sort(sorters[view.sort] || sorters.newest);
   }
 
-  function txRowHtml(x) {
+  /** showDate: hiện ngày trong dòng khi danh sách không gom theo ngày */
+  function txRowHtml(x, showDate = false) {
     const sid = scopeId();
     if (x.kind === 'tx') {
       const t = x.t;
       const st = Store.getStack(t.stackId);
       const sign = t.type === 'income' ? '+' : '−';
-      const fixedExp = Store.isFixedExpense(t);
-      const paidChip = fixedExp
-        ? `<button type="button" class="paid-chip ${t.paid ? 'on' : ''}" data-paid role="checkbox" aria-checked="${!!t.paid}" title="${t.paid ? 'Bấm để bỏ ghi nhận đã chi trả' : 'Bấm để ghi nhận đã chi trả'}"><span class="pc-box"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>${t.paid ? 'Đã chi trả' : 'Chưa trả'}</button>`
-        : '';
-      return `<li class="tx ${fixedExp && !t.paid ? 'unpaid' : ''}" data-kind="tx" data-id="${t.id}">
+      const payable = Store.isPayable(t);
+      const paid = payable && t.paid !== false;
+      const paidChip = payable
+        ? `<button type="button" class="paid-chip ${paid ? 'on' : ''}" data-paid role="checkbox" aria-checked="${paid}"
+            title="${paid ? 'Bấm để bỏ ghi nhận đã chi trả' : 'Bấm để ghi nhận đã chi trả'}">
+            <span class="pc-box"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+            <span class="pc-txt">${paid ? 'Đã trả' : 'Chưa trả'}</span></button>`
+        : '<span class="paid-spacer" aria-hidden="true"></span>';
+      return `<li class="tx ${payable ? (paid ? 'paid' : 'unpaid') : ''}" data-kind="tx" data-id="${t.id}">
         <span class="tx-ico" style="--c:${x.cat.color}">${esc(x.cat.icon)}</span>
         <div class="tx-main">
-          <div class="tx-title">${esc(t.title || x.cat.name)}${t.recurring ? '<span class="tag-rec" title="Lặp lại hàng tháng">🔁<span class="tag-txt"> Cố định</span></span>' : ''}</div>
-          ${paidChip ? `<div class="tx-paid-row">${paidChip}</div>` : ''}
-          <div class="tx-meta">
-            <span>${esc(x.cat.name)}</span>
-            ${!sid && st ? `<span class="sep">•</span><span class="chip-stack" style="--c:${st.color}">${esc(st.name)}</span>` : ''}
-            ${view.sort === 'high' || view.sort === 'low' ? `<span class="sep">•</span><span>${U.dateLabel(t.date)}</span>` : ''}
-            ${t.note ? `<span class="sep">•</span><span class="tx-note">${esc(t.note)}</span>` : ''}
+          <div class="tx-title">${esc(t.title || x.cat.name)}</div>
+          <div class="tx-line">
+            <span class="tx-amt num ${t.type}">${sign}${U.fmt(t.amount)}</span>
+            <span class="tx-meta">
+              <span>${esc(x.cat.name)}</span>
+              ${!sid && st ? `<span class="chip-stack" style="--c:${st.color}">${esc(st.name)}</span>` : ''}
+              ${showDate || view.sort === 'high' || view.sort === 'low' ? `<span>${U.dateLabel(t.date)}</span>` : ''}
+              ${t.note ? `<span class="tx-note">${esc(t.note)}</span>` : ''}
+            </span>
           </div>
         </div>
-        <span class="tx-amt num ${t.type}">${sign}${U.fmt(t.amount)}</span>
+        ${paidChip}
         <button class="tx-del" data-del aria-label="Xóa"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button>
       </li>`;
     }
@@ -447,18 +465,25 @@
       <span class="tx-ico">${isAdv ? '🔄' : '↩️'}</span>
       <div class="tx-main">
         <div class="tx-title">${isAdv ? 'Ứng trước' : 'Hoàn trả nợ'}: ${esc(stackName(tr.fromStackId))} → ${esc(stackName(tr.toStackId))}</div>
-        <div class="tx-meta"><span>Chuyển nội bộ · không tính thu/chi</span>
-          ${view.sort === 'high' || view.sort === 'low' ? `<span class="sep">•</span><span>${U.dateLabel(tr.date)}</span>` : ''}
-          ${tr.note ? `<span class="sep">•</span><span class="tx-note">${esc(tr.note)}</span>` : ''}</div>
+        <div class="tx-line">
+          <span class="tx-amt num transfer">${sign}${U.fmt(tr.amount)}</span>
+          <span class="tx-meta"><span>Chuyển nội bộ, không tính thu/chi</span>
+            ${view.sort === 'high' || view.sort === 'low' ? `<span>${U.dateLabel(tr.date)}</span>` : ''}
+            ${tr.note ? `<span class="tx-note">${esc(tr.note)}</span>` : ''}</span>
+        </div>
       </div>
-      <span class="tx-amt num transfer">${sign}${U.fmt(tr.amount)}</span>
+      <span class="paid-spacer" aria-hidden="true"></span>
       <button class="tx-del" data-del aria-label="Xóa"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button>
     </li>`;
   }
 
   function renderTxList() {
-    const list = buildItems();
-    $('txCount').textContent = list.length ? `(${list.length})` : '';
+    const all = buildItems();
+    const isFixed = (x) => x.kind === 'tx' && x.t.recurring;
+    renderFixedList(all.filter(isFixed));
+
+    const list = all.filter((x) => !isFixed(x));
+    $('txCount').textContent = list.length || '';
     if (!list.length) {
       const filtered = view.search || view.type !== 'all';
       $('txList').innerHTML = `<li class="empty"><span class="e-ico">${filtered ? '🔍' : '🧾'}</span>
@@ -466,7 +491,7 @@
       return;
     }
     const grouped = view.sort === 'newest' || view.sort === 'oldest';
-    if (!grouped) { $('txList').innerHTML = list.map(txRowHtml).join(''); return; }
+    if (!grouped) { $('txList').innerHTML = list.map((x) => txRowHtml(x)).join(''); return; }
 
     let html = '', lastDate = null;
     list.forEach((x) => {
@@ -484,15 +509,35 @@
     $('txList').innerHTML = html;
   }
 
-  $('txList').addEventListener('click', async (e) => {
+  /** Thẻ "Khoản cố định": các giao dịch lặp lại hàng tháng, kèm tiến độ chi trả */
+  function renderFixedList(list) {
+    const exp = list.filter((x) => x.type === 'expense');
+    const paid = exp.filter((x) => x.t.paid !== false);
+    const left = exp.reduce((a, x) => a + (x.t.paid === false ? x.amount : 0), 0);
+    $('fixedCount').textContent = list.length || '';
+    $('fixedSummary').innerHTML = exp.length
+      ? `<span class="fs-track"><i style="width:${(paid.length / exp.length) * 100}%"></i></span>
+         <span>Đã trả <b class="num">${paid.length}/${exp.length}</b>${left ? ` · còn <b class="num">${U.fmt(left)}</b>` : ''}</span>`
+      : '';
+    if (!list.length) {
+      const filtered = view.search || view.type !== 'all';
+      $('fixedList').innerHTML = `<li class="empty"><span class="e-ico">🔁</span>
+        ${filtered ? 'Không có khoản cố định phù hợp' : 'Chưa có khoản cố định. Bật "Lặp lại hàng tháng" khi thêm giao dịch.'}</li>`;
+      return;
+    }
+    $('fixedList').innerHTML = list.map((x) => txRowHtml(x, true)).join('');
+  }
+
+  const onListClick = async (e) => {
     const row = e.target.closest('.tx');
     if (!row) return;
     const { kind, id } = row.dataset;
     if (e.target.closest('[data-paid]')) {
       const t = Store.get().transactions.find((x) => x.id === id);
       if (!t) return;
-      Store.setPaid(id, !t.paid);
-      toast(!t.paid ? `Đã ghi nhận chi trả “${t.title || 'khoản cố định'}” (${U.fmt(t.amount)})` : `Đã bỏ ghi nhận chi trả “${t.title || 'khoản cố định'}”`);
+      const nowPaid = t.paid === false;
+      Store.setPaid(id, nowPaid);
+      toast(nowPaid ? `Đã trả “${t.title || 'khoản chi'}” (${U.fmt(t.amount)})` : `Đã chuyển “${t.title || 'khoản chi'}” về chưa trả`);
       return;
     }
     if (e.target.closest('[data-del]')) {
@@ -514,7 +559,9 @@
       return;
     }
     if (kind === 'tx') openTxModal(Store.get().transactions.find((x) => x.id === id));
-  });
+  };
+  $('txList').addEventListener('click', onListClick);
+  $('fixedList').addEventListener('click', onListClick);
 
   $('txSearch').addEventListener('input', U.debounce((e) => { view.search = e.target.value; renderTxList(); }, 150));
   $('txType').addEventListener('change', (e) => { view.type = e.target.value; renderTxList(); });
@@ -568,12 +615,14 @@
     syncPaidField();
   }
 
-  /** Ô "Đã chi trả" chỉ hiện với khoản CHI có bật "Lặp lại hàng tháng" */
+  /** Ô "Đã chi trả" hiện với mọi khoản CHI */
   function syncPaidField() {
-    const show = txForm.type === 'expense' && $('txRecurring').checked;
-    $('txPaidWrap').style.display = show ? '' : 'none';
+    $('txPaidWrap').style.display = txForm.type === 'expense' ? '' : 'none';
   }
-  $('txRecurring').addEventListener('change', syncPaidField);
+  // Khoản mới: chi thường mặc định đã trả, chi cố định mặc định chưa trả
+  $('txRecurring').addEventListener('change', () => {
+    if (!txForm.editingId) $('txPaid').checked = !$('txRecurring').checked;
+  });
 
   function openTxModal(tx) {
     txForm.editingId = tx?.id || null;
@@ -587,7 +636,7 @@
     $('txTitle').value = tx?.title || '';
     $('txNote').value = tx?.note || '';
     $('txRecurring').checked = !!tx?.recurring;
-    $('txPaid').checked = tx ? tx.paid !== false : false;
+    $('txPaid').checked = tx ? tx.paid !== false : true;
     syncPaidField();
     $('txStack').value = tx?.stackId || scopeId() || Store.get().stacks[0].id;
     $('txDate').value = tx?.date || (view.month === U.currentMonth() ? U.todayStr() : `${view.month}-01`);
@@ -621,8 +670,8 @@
       date: $('txDate').value || U.todayStr(),
       recurring: $('txRecurring').checked,
     };
-    // Chi cố định: theo ô tick. Các loại khác luôn được tính.
-    data.paid = (data.type === 'expense' && data.recurring) ? $('txPaid').checked : true;
+    // Khoản chi: theo ô tick. Khoản thu luôn được tính.
+    data.paid = data.type === 'expense' ? $('txPaid').checked : true;
     if (txForm.editingId) {
       const old = Store.get().transactions.find((t) => t.id === txForm.editingId);
       if (!data.recurring && old?.recurring) data.seriesId = old.seriesId; // giữ chuỗi để không bị gợi ý lại
@@ -1108,7 +1157,7 @@
         'Số tiền': t.amount,
         'Thu/Chi (+/−)': !Store.isCounted(t) ? 0 : (t.type === 'income' ? t.amount : -t.amount),
         'Lặp lại hàng tháng': t.recurring ? 'Có' : '',
-        'Đã chi trả (khoản cố định)': Store.isFixedExpense(t) ? (t.paid ? 'Đã trả' : 'Chưa trả') : '',
+        'Đã chi trả': Store.isPayable(t) ? (t.paid ? 'Đã trả' : 'Chưa trả') : '',
       };
     });
     const transfers = [...st.transfers].sort((a, b) => a.date.localeCompare(b.date)).map((t) => ({
@@ -1160,7 +1209,7 @@
    * ===================================================== */
   function applyThemeMeta() {
     const dark = document.documentElement.getAttribute('data-theme') === 'dark';
-    document.querySelector('meta[name="theme-color"]').content = dark ? '#0c0f16' : '#f4f6fb';
+    document.querySelector('meta[name="theme-color"]').content = dark ? '#0d1216' : '#eceff2';
   }
   $('btnTheme').addEventListener('click', () => {
     const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
