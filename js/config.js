@@ -8,6 +8,6 @@
  * Để trống thì app chạy như cũ, chỉ lưu trên máy.
  * ========================================================= */
 window.APP_CONFIG = {
-  SUPABASE_URL: 'https://xwcsxjjsomrihdzdwamf.supabase.co/rest/v1/',
-  SUPABASE_ANON_KEY: 'sb_publishable_WVUkDdXKoYG_QldZqkEtNA_zM0TZYmM',
+  SUPABASE_URL: 'https://lmwjehffcbmwbafpigfv.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_Jg8LT9TIyuynOwwDlgoUOA_86WtrEea',
 };
