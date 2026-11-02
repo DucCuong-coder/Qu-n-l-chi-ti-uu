@@ -99,7 +99,7 @@ h1, h2, h3, h4 { margin: 0; line-height: 1.2; font-family: var(--display); font-
 .small { font-size: 12.5px; }
 .container { max-width: 1280px; margin: 0 auto; padding: 22px 20px 96px; }
 .spacer { flex: 1; }
-.hidden { display: none !important; }
+.hidden, [hidden] { display: none !important; }
 .num { font-variant-numeric: tabular-nums; }
 
 /* Thanh cuộn mảnh, dùng chung cho các vùng cuộn */
@@ -188,6 +188,33 @@ h1, h2, h3, h4 { margin: 0; line-height: 1.2; font-family: var(--display); font-
 .menu button:hover { background: var(--surface-2); }
 .menu button svg { color: var(--text-3); }
 .menu hr { border: 0; border-top: 1px solid var(--border); margin: 6px 4px; }
+
+/* ---------- Tài khoản & đồng bộ ---------- */
+.account-btn { position: relative; }
+.acc-dot {
+  position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%;
+  border: 2px solid var(--surface); box-sizing: content-box; background: var(--text-3); display: none;
+}
+.acc-dot[data-status="synced"] { display: block; background: var(--green); box-shadow: 0 0 calc(var(--glow) * 8px) var(--green); }
+.acc-dot[data-status="syncing"] { display: block; background: var(--blue); animation: blink 1s ease-in-out infinite; }
+.acc-dot[data-status="offline"] { display: block; background: var(--amber); }
+.acc-dot[data-status="error"] { display: block; background: var(--red); }
+.account-btn.signed-in { color: var(--purple); border-color: color-mix(in srgb, var(--purple) 45%, var(--border)); }
+@keyframes blink { 50% { opacity: .3; } }
+
+.btn-google { width: 100%; height: 44px; color: var(--text); }
+.btn-google .g-logo { width: 18px; height: 18px; }
+.or-line { display: flex; align-items: center; gap: 10px; color: var(--text-3); font-size: 12.5px; }
+.or-line::before, .or-line::after { content: ''; flex: 1; border-top: 1px solid var(--border); }
+.acc-card { display: flex; align-items: center; gap: 12px; }
+.acc-avatar {
+  width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0;
+  background: var(--grad); color: #fff; font-weight: 800; font-size: 19px; overflow: hidden;
+}
+.acc-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.acc-meta { display: flex; flex-direction: column; min-width: 0; }
+.acc-meta b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acc-meta small { color: var(--text-3); font-weight: 500; }
 
 /* ---------- Stack tabs ---------- */
 .stack-tabs {
@@ -386,7 +413,7 @@ h1, h2, h3, h4 { margin: 0; line-height: 1.2; font-family: var(--display); font-
 .link-btn:hover { text-decoration: underline; }
 
 /* ---------- Inputs ---------- */
-input[type="text"], input[type="search"], input[type="date"], select {
+input[type="text"], input[type="search"], input[type="date"], input[type="email"], input[type="password"], select {
   width: 100%; height: 40px; padding: 0 12px; border-radius: 11px;
   border: 1px solid var(--border); background: var(--surface-2); outline: none; transition: border-color .15s, box-shadow .15s;
   font-size: 14px;

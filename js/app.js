@@ -92,10 +92,11 @@
   });
 
   /** Hộp xác nhận thay cho confirm() — trả về Promise<boolean> */
-  function confirmDialog(message, { title = 'Xác nhận', yes = 'Đồng ý', danger = true } = {}) {
+  function confirmDialog(message, { title = 'Xác nhận', yes = 'Đồng ý', no = 'Hủy', danger = true } = {}) {
     return new Promise((resolve) => {
       $('confirmTitle').textContent = title;
       $('confirmMsg').textContent = message;
+      $('confirmNo').textContent = no;
       const yesBtn = $('confirmYes');
       yesBtn.textContent = yes;
       yesBtn.className = 'btn ' + (danger ? 'btn-danger' : 'btn-primary');
@@ -1199,6 +1200,112 @@
       toast('Không tải được thư viện Excel, đã xuất file .csv thay thế');
     }
   }
+
+  /* =====================================================
+   * TÀI KHOẢN & ĐỒNG BỘ
+   * ===================================================== */
+  const SYNC_LABELS = {
+    'signed-out': 'Chưa đăng nhập',
+    syncing: 'Đang đồng bộ…',
+    synced: 'Đã đồng bộ',
+    offline: 'Mất mạng — sẽ đồng bộ khi có mạng lại',
+    error: 'Đồng bộ lỗi — bấm "Đồng bộ ngay" để thử lại',
+  };
+  let authMode = 'signin';
+
+  function renderAccount() {
+    const user = Cloud.user;
+    const st = Cloud.status;
+    $('accDot').dataset.status = user ? st : 'off';
+    $('btnAccount').classList.toggle('signed-in', !!user);
+    $('btnAccount').title = user ? `${user.email} · ${SYNC_LABELS[st] || ''}` : 'Đăng nhập để đồng bộ';
+
+    $('authOff').hidden = Cloud.enabled;
+    $('authForm').hidden = !Cloud.enabled || !!user;
+    $('authInfo').hidden = !user;
+    if (!user) return;
+    const name = user.user_metadata?.full_name || user.email || '';
+    const pic = user.user_metadata?.avatar_url;
+    $('accAvatar').innerHTML = pic ? `<img src="${esc(pic)}" alt="" referrerpolicy="no-referrer">` : esc(name.charAt(0).toUpperCase());
+    $('accEmail').textContent = user.email || name;
+    $('accStatus').textContent = SYNC_LABELS[st] || '';
+  }
+
+  function setAuthMode(mode) {
+    authMode = mode;
+    document.querySelectorAll('#authModeSeg button').forEach((b) => b.classList.toggle('active', b.dataset.mode === mode));
+    $('authSubmit').textContent = mode === 'signup' ? 'Tạo tài khoản' : 'Đăng nhập';
+    $('authPassword').autocomplete = mode === 'signup' ? 'new-password' : 'current-password';
+  }
+
+  $('btnAccount').addEventListener('click', () => { renderAccount(); Modal.open('authModal'); });
+  $('authModeSeg').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-mode]');
+    if (b) setAuthMode(b.dataset.mode);
+  });
+
+  $('authGoogle').addEventListener('click', async () => {
+    try { await Cloud.signInGoogle(); } // trình duyệt sẽ chuyển sang trang Google
+    catch (err) { toast(err.message, { error: true }); }
+  });
+
+  $('authForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = $('authEmail').value.trim();
+    const password = $('authPassword').value;
+    const btn = $('authSubmit');
+    btn.disabled = true;
+    try {
+      if (authMode === 'signup') {
+        const needConfirm = await Cloud.signUpEmail(email, password);
+        if (needConfirm) {
+          setAuthMode('signin');
+          toast(`Đã gửi email xác nhận tới ${email} — bấm link trong thư rồi đăng nhập`, { duration: 9000 });
+          return;
+        }
+      } else {
+        await Cloud.signInEmail(email, password);
+      }
+      $('authPassword').value = '';
+      Modal.close('authModal');
+    } catch (err) {
+      toast(err.message, { error: true });
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  $('authSyncNow').addEventListener('click', () => Cloud.syncNow());
+
+  $('authSignOut').addEventListener('click', async () => {
+    const synced = await Cloud.flush();
+    const msg = synced
+      ? 'Dữ liệu vẫn được giữ trong tài khoản. Dữ liệu trên máy này sẽ được xóa trắng.'
+      : 'CẢNH BÁO: còn thay đổi CHƯA đồng bộ được lên tài khoản (có thể do mất mạng). Đăng xuất bây giờ sẽ MẤT các thay đổi đó.';
+    const ok = await confirmDialog(msg, { title: 'Đăng xuất?', yes: 'Đăng xuất' });
+    if (!ok) return;
+    await Cloud.signOut();
+    Modal.close('authModal');
+    toast('Đã đăng xuất');
+  });
+
+  Cloud.init({
+    onStatus: renderAccount,
+    onUser: (user) => {
+      renderAccount();
+      if (user && Modal.isOpen('authModal')) Modal.close('authModal');
+    },
+    // Cả máy này lẫn tài khoản đều có thay đổi mới -> người dùng chọn giữ bản nào
+    resolveConflict: async () => {
+      const useCloud = await confirmDialog(
+        'Tài khoản đã có dữ liệu trên cloud, và máy này cũng có dữ liệu chưa đồng bộ.\n' +
+        'Chọn bản muốn giữ — bản còn lại sẽ bị thay thế.\n' +
+        '(Nếu chọn dữ liệu tài khoản, bản trên máy này vẫn được cất một bản dự phòng trong trình duyệt.)',
+        { title: 'Dữ liệu khác nhau', yes: 'Dùng dữ liệu tài khoản', no: 'Giữ dữ liệu máy này', danger: false }
+      );
+      return useCloud ? 'remote' : 'local';
+    },
+  });
 
   /* =====================================================
    * THEME & THÁNG

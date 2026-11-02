@@ -19,7 +19,7 @@
       } catch (e) { document.documentElement.setAttribute('data-theme', 'light'); }
     })();
   </script>
-  <link rel="stylesheet" href="css/style.css?v=4">
+  <link rel="stylesheet" href="css/style.css?v=5">
 </head>
 <body>
 
@@ -56,6 +56,11 @@
             <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
           </button>
         </div>
+
+        <button class="icon-btn account-btn" id="btnAccount" aria-label="Tài khoản & đồng bộ" title="Đăng nhập để đồng bộ">
+          <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span class="acc-dot" id="accDot" data-status="off"></span>
+        </button>
 
         <button class="icon-btn theme-btn" id="btnTheme" aria-label="Đổi giao diện sáng/tối" title="Sáng / Tối">
           <svg class="ico-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
@@ -422,6 +427,64 @@
     </div>
   </div>
 
+  <!-- ================= MODAL: TÀI KHOẢN ================= -->
+  <div class="modal" id="authModal" aria-hidden="true">
+    <div class="modal-box modal-sm" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+      <div class="modal-head">
+        <h3 id="authTitle">Tài khoản</h3>
+        <button class="icon-btn" data-close aria-label="Đóng"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+
+      <!-- Chưa cấu hình Supabase -->
+      <div class="modal-body" id="authOff" hidden>
+        <p class="hint warn">Chưa cấu hình Supabase nên chưa đăng nhập được. Điền <b>SUPABASE_URL</b> và <b>SUPABASE_ANON_KEY</b> trong <b>js/config.js</b> (xem README).</p>
+      </div>
+
+      <!-- Chưa đăng nhập -->
+      <form class="modal-body" id="authForm" autocomplete="on" hidden>
+        <p class="hint">Đăng nhập để đồng bộ dữ liệu giữa máy tính và điện thoại.</p>
+        <button type="button" class="btn btn-ghost btn-google" id="authGoogle">
+          <svg viewBox="0 0 24 24" class="g-logo"><path fill="#4285F4" stroke="none" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.76h3.56c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" stroke="none" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.56-2.76c-.98.66-2.24 1.06-3.72 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"/><path fill="#FBBC05" stroke="none" d="M5.84 14.11A6.6 6.6 0 0 1 5.5 12c0-.73.13-1.44.34-2.11V7.05H2.18A11 11 0 0 0 1 12c0 1.78.43 3.45 1.18 4.95l3.66-2.84z"/><path fill="#EA4335" stroke="none" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1A11 11 0 0 0 2.18 7.05l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"/></svg>
+          Tiếp tục với Google
+        </button>
+        <div class="or-line"><span>hoặc dùng email</span></div>
+        <div class="seg" id="authModeSeg">
+          <button type="button" data-mode="signin" class="active">Đăng nhập</button>
+          <button type="button" data-mode="signup">Đăng ký</button>
+        </div>
+        <label class="field">
+          <span>Email</span>
+          <input type="email" id="authEmail" autocomplete="email" placeholder="ban@gmail.com" required>
+        </label>
+        <label class="field">
+          <span>Mật khẩu</span>
+          <input type="password" id="authPassword" autocomplete="current-password" minlength="6" placeholder="Tối thiểu 6 ký tự" required>
+        </label>
+        <div class="modal-foot">
+          <span class="spacer"></span>
+          <button type="submit" class="btn btn-primary" id="authSubmit">Đăng nhập</button>
+        </div>
+      </form>
+
+      <!-- Đã đăng nhập -->
+      <div class="modal-body" id="authInfo" hidden>
+        <div class="acc-card">
+          <div class="acc-avatar" id="accAvatar"></div>
+          <div class="acc-meta">
+            <b id="accEmail"></b>
+            <small id="accStatus"></small>
+          </div>
+        </div>
+        <p class="hint small">Dữ liệu tự lưu lên tài khoản sau mỗi thay đổi. Mở app trên máy khác và đăng nhập cùng tài khoản để thấy cùng dữ liệu.</p>
+        <div class="modal-foot">
+          <button type="button" class="btn btn-danger-ghost" id="authSignOut">Đăng xuất</button>
+          <span class="spacer"></span>
+          <button type="button" class="btn btn-ghost" id="authSyncNow">Đồng bộ ngay</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ================= MODAL: XÁC NHẬN ================= -->
   <div class="modal" id="confirmModal" aria-hidden="true">
     <div class="modal-box modal-sm" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle">
@@ -442,11 +505,16 @@
   <!-- Thư viện biểu đồ (nếu offline, app vẫn chạy, chỉ ẩn biểu đồ) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 
-  <!-- Thứ tự quan trọng: utils -> store (state) -> ledger (stack & công nợ) -> charts -> app (UI) -->
-  <script src="js/utils.js?v=4"></script>
-  <script src="js/store.js?v=4"></script>
-  <script src="js/ledger.js?v=4"></script>
-  <script src="js/charts.js?v=4"></script>
-  <script src="js/app.js?v=4"></script>
+  <!-- Đăng nhập & đồng bộ (nếu không tải được, app vẫn chạy và lưu trên máy) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="js/config.js?v=5"></script>
+
+  <!-- Thứ tự quan trọng: utils -> store (state) -> cloud (đồng bộ) -> ledger (stack & công nợ) -> charts -> app (UI) -->
+  <script src="js/utils.js?v=5"></script>
+  <script src="js/store.js?v=5"></script>
+  <script src="js/cloud.js?v=5"></script>
+  <script src="js/ledger.js?v=5"></script>
+  <script src="js/charts.js?v=5"></script>
+  <script src="js/app.js?v=5"></script>
 </body>
 </html>

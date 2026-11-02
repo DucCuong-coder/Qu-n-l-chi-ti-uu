@@ -200,10 +200,27 @@ const Store = (() => {
     }
   }
 
-  function commit() {
+  /** origin: 'local' = người dùng sửa trên máy này, 'remote' = dữ liệu kéo từ cloud về */
+  function commit(origin = 'local') {
     save();
-    listeners.forEach((fn) => fn(state));
+    listeners.forEach((fn) => fn(state, origin));
   }
+
+  /** Thay toàn bộ state (dùng khi đồng bộ cloud) */
+  function replace(s, origin = 'remote') {
+    state = normalize(s || {});
+    commit(origin);
+  }
+
+  /** Đưa về dữ liệu mặc định (dùng khi đăng xuất) */
+  function reset() {
+    state = defaultState();
+    commit('remote');
+  }
+
+  /** Máy này có dữ liệu người dùng tự nhập chưa (để biết có cần hỏi khi đăng nhập) */
+  const hasUserData = () =>
+    state.transactions.length > 0 || state.transfers.length > 0 || Object.keys(state.plans).length > 0;
 
   function subscribe(fn) {
     listeners.add(fn);
@@ -424,7 +441,7 @@ const Store = (() => {
   }
 
   return {
-    load, subscribe, get, getStack, getCategory, categoriesOf,
+    load, subscribe, replace, reset, hasUserData, get, getStack, getCategory, categoriesOf,
     addStack, updateStack, deleteStack,
     getPlan, setPlan,
     addTransaction, updateTransaction, deleteTransaction, setPaid, isPayable, isCounted,
