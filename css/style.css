@@ -137,7 +137,6 @@ h1, h2, h3, h4 { margin: 0; line-height: 1.2; font-family: var(--display); font-
 .brand-text h1 { font-size: 19px; font-weight: 800; letter-spacing: -.02em; }
 .brand-text p { margin: 0; font-size: 12.5px; color: var(--text-3); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-<<<<<<< Updated upstream
 /* Số dư tổng — điểm nhấn duy nhất của trang */
 .head-balance {
   display: flex; flex-direction: column; justify-content: center;
@@ -150,28 +149,6 @@ h1, h2, h3, h4 { margin: 0; line-height: 1.2; font-family: var(--display); font-
   filter: drop-shadow(0 0 calc(var(--glow) * 14px) rgba(167, 123, 255, .5));
 }
 .head-balance.neg b { background: none; color: var(--red); filter: drop-shadow(0 0 calc(var(--glow) * 12px) color-mix(in srgb, var(--red) 55%, transparent)); }
-=======
-/* Số dư hiện tại (góc trên bên trái, cạnh tiêu đề) */
-.balance-box {
-  --bc: var(--blue);
-  display: flex; flex-direction: column; justify-content: center; gap: 1px;
-  margin-left: 6px; padding: 6px 14px 6px 12px; min-width: 0;
-  border-radius: 12px;
-  border: 1px solid color-mix(in srgb, var(--bc) 30%, transparent);
-  border-left: 4px solid var(--bc);
-  background: color-mix(in srgb, var(--bc) 11%, var(--surface));
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--bc) 16%, transparent);
-  transition: background .2s, border-color .2s, box-shadow .2s;
-}
-.balance-label { font-size: 11.5px; font-weight: 600; color: var(--text-2); line-height: 1.2; white-space: nowrap; }
-.balance-value {
-  font-size: 21px; font-weight: 800; letter-spacing: -.02em; line-height: 1.2;
-  color: var(--bc); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.balance-box.negative { --bc: var(--red); }
-[data-theme="dark"] .balance-box { --bc: #60a5fa; }
-[data-theme="dark"] .balance-box.negative { --bc: #f87171; }
->>>>>>> Stashed changes
 
 .header-controls { display: flex; align-items: center; gap: 8px; }
 .icon-btn {
@@ -287,7 +264,6 @@ h1, h2, h3, h4 { margin: 0; line-height: 1.2; font-family: var(--display); font-
 .banner.info { --c: var(--blue); }
 .banner .b-actions { display: flex; gap: 8px; }
 
-<<<<<<< Updated upstream
 /* ---------- Bố cục 2 cột ---------- */
 .layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 20px; align-items: start; }
 .main-col, .side-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
@@ -295,12 +271,6 @@ h1, h2, h3, h4 { margin: 0; line-height: 1.2; font-family: var(--display); font-
 
 /* ---------- Cards: một kiểu duy nhất cho mọi khối ---------- */
 .card {
-=======
-/* ---------- Stat cards ---------- */
-.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 16px; }
-.stat {
-  --c: var(--blue);
->>>>>>> Stashed changes
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
   padding: 18px 20px; box-shadow: var(--shadow); min-width: 0;
 }
@@ -704,7 +674,6 @@ input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px c
 }
 
 /* ---------- Responsive ---------- */
-<<<<<<< Updated upstream
 @media (max-width: 1100px) {
   .layout { grid-template-columns: minmax(0, 1fr); }
   /* Cột phụ xuống dưới, chia 2 cột: công nợ trải ngang, 2 biểu đồ cạnh nhau */
@@ -725,10 +694,6 @@ input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px c
   #btnAddTx { display: none; }
   .fab { display: grid; }
   .side-col { grid-template-columns: minmax(0, 1fr); }
-=======
-@media (max-width: 1024px) {
-  .grid-main, .stack-panel, .overview-panel { grid-template-columns: 1fr; }
->>>>>>> Stashed changes
 }
 @media (max-width: 640px) {
   body { font-size: 14.5px; }
@@ -738,21 +703,11 @@ input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px c
   .brand { width: 100%; }
   .brand-text h1 { font-size: 16px; }
   .brand-logo { width: 38px; height: 38px; }
-<<<<<<< Updated upstream
   .head-balance { margin-left: auto; padding-left: 14px; text-align: right; }
   .head-balance b { font-size: 21px; }
   .header-controls { width: 100%; }
   .month-nav { flex: 1; }
   .month-field { flex: 1; min-width: 0; }
-=======
-  .brand { flex-wrap: wrap; row-gap: 8px; width: 100%; }
-  .balance-box { margin-left: 0; padding: 5px 12px 5px 10px; }
-  .balance-value { font-size: 18px; }
-  .header-controls { width: 100%; }
-  .month-nav { flex: 1; }
-  .month-field { flex: 1; min-width: 0; }
-  .stats { grid-template-columns: 1fr; gap: 10px; }
->>>>>>> Stashed changes
   .stat { padding: 13px 14px; }
   .stat-value { font-size: 20px; }
   .stat-label { font-size: 12.5px; }
