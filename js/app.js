@@ -236,7 +236,7 @@
     $('banners').innerHTML = out.join('');
   }
 
-  /* ---------- 4 thẻ thống kê ---------- */
+  /* ---------- 3 thẻ thống kê + Số dư hiện tại ở header ---------- */
   function statCard(cls, label, value, sub, extra = '') {
     return `<div class="stat ${cls}">
       <div class="stat-label"><span class="dot"></span>${label}</div>
@@ -252,6 +252,15 @@
 
   const expSub = (n, unpaid) => `${n} khoản đã trả` + (unpaid > 0 ? `<br><span class="unpaid-note">Còn ${U.fmt(unpaid)} chưa trả</span>` : '');
 
+  /** Cập nhật khối Số dư hiện tại ở góc trên bên trái (header) theo Stack đang chọn */
+  function renderBalance(balance, note) {
+    const box = $('balanceBox'), val = $('balanceValue');
+    if (!box || !val) return;
+    val.textContent = U.fmt(balance);
+    box.classList.toggle('negative', balance < 0);
+    box.title = note;
+  }
+
   function renderStats() {
     const sid = scopeId();
     const nInc = countTx('income'), nExp = countTx('expense');
@@ -259,6 +268,7 @@
     if (!sid) {
       const o = Ledger.overviewMonth(view.month);
       const over = o.remaining < 0;
+      renderBalance(o.balance, 'Tất cả Stack · Thu − Chi (không tính chuyển nội bộ)');
       html = statCard('income', 'Tổng thu nhập', U.fmt(o.income),
           o.plannedIncome ? `Dự kiến ${U.fmt(o.plannedIncome)}` : `${nInc} khoản thu`)
         + statCard('expense', 'Tổng chi tiêu', U.fmt(o.expense), expSub(nExp, o.unpaid))
@@ -272,12 +282,12 @@
       const transferNote = s.netTransfer
         ? `Gồm ${s.netTransfer > 0 ? '+' : '−'}${U.fmt(Math.abs(s.netTransfer))} chuyển nội bộ`
         : 'Thu − Chi trong tháng';
+      renderBalance(s.balance, `${stackName(sid)} · ${transferNote}`);
       const limitNote = s.netTransfer
         ? `<span class="hide-sm"> (${U.fmt(s.plan.limit)} ${s.netTransfer > 0 ? '+' : '−'} ${U.fmt(Math.abs(s.netTransfer))} nội bộ)</span>` : '';
       html = statCard('income', 'Tổng thu nhập', U.fmt(s.income),
           s.plan.income ? `Dự kiến ${U.fmt(s.plan.income)}` : `${nInc} khoản thu`)
         + statCard('expense', 'Tổng chi tiêu', U.fmt(s.expense), expSub(nExp, s.unpaid))
-        + statCard('balance', 'Số dư khả dụng', U.fmt(s.balance), transferNote)
         + (s.plan.empty && !s.netTransfer
           ? statCard('budget', 'Hạn mức còn lại', 'Chưa đặt', 'Bấm "Đặt kế hoạch" bên dưới')
           : statCard('budget' + (over ? ' over' : ''), over ? 'Vượt hạn mức' : 'Hạn mức còn lại', U.fmt(s.remaining),
